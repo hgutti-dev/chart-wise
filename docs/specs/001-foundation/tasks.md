@@ -48,11 +48,11 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 
 ## Fase E — Primitivas compartidas *(FR-005)*
 
-- [ ] **T050 [P]** `src/shared/domain/result.ts`: `Result<T, E>` con `ok`/`err`, `isOk`/`isErr`, `map`/`mapErr`, `unwrap`/`unwrapOr`.
-- [ ] **T051 [P]** `src/shared/domain/domain-error.ts`: clase base `DomainError` (`name`, `message`, `code?`).
-- [ ] **T052 [P]** `src/shared/application/tenant-context.ts`: `TenantContext` (transporta `tenantId`; opcional `userId`).
-- [ ] **T053 [P]** `src/shared/domain/entity.ts` (base mínima) — opcional, si el módulo de ejemplo lo usa.
-- [ ] **T054** Confirmar que ninguna primitiva importa framework/infra (lo cubre el test de arquitectura T072).
+- [x] **T050 [P]** `src/shared/domain/result.ts`: `Result<T, E>` con `ok`/`err`, `isOk`/`isErr`, `map`/`mapErr`, `unwrap`/`unwrapOr`.
+- [x] **T051 [P]** `src/shared/domain/domain-error.ts`: clase base `DomainError` (`name`, `message`, `code`). *(Sigue [data-model.md](data-model.md) §5: `abstract readonly code: string` requerido; el constructor fija `name` vía `new.target`.)*
+- [x] **T052 [P]** `src/shared/application/tenant-context.ts`: `TenantContext` (transporta `tenantId`; opcional `userId`).
+- [x] **T053 [P]** `src/shared/domain/entity.ts` (base mínima) — opcional, si el módulo de ejemplo lo usa.
+- [x] **T054** Confirmar que ninguna primitiva importa framework/infra (lo cubre el test de arquitectura T072). *(Verificado ahora: `pnpm typecheck` y `pnpm exec eslint src/shared` en verde.)*
 
 ## Fase F — Esqueleto + módulo `example` *(FR-006 → SC-009)*
 
