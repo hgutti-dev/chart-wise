@@ -2,7 +2,7 @@
 
 - **Feature:** `001-foundation`
 - **Spec:** [spec.md](spec.md) · **Plan:** [plan.md](plan.md) · **Data model:** [data-model.md](data-model.md)
-- **Estado:** Pendiente
+- **Estado:** Implementado
 
 Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin dependencia con las tareas [P] hermanas del mismo grupo). Cada tarea nombra el/los archivo(s) y el requisito que satisface.
 
@@ -10,23 +10,23 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 
 ## Fase 0 — Preparación
 
-- [ ] **T001** Fijar runtime: añadir `engines.node >= 20` en `package.json` y crear `.nvmrc`. *(Q3)*
-- [ ] **T002** Añadir scripts al `package.json`: `typecheck`, `lint`, `test`, `test:watch`, `db:up`, `db:down`, `db:migrate`, `db:seed`, `setup`. **Sin** ningún script con `prisma db push`. *(NFR-006, FR-004, SC-008)*
+- [x] **T001** Fijar runtime: añadir `engines.node >= 20` en `package.json` y crear `.nvmrc`. *(Q3)*
+- [x] **T002** Añadir scripts al `package.json`: `typecheck`, `lint`, `test`, `test:watch`, `db:up`, `db:down`, `db:migrate`, `db:seed`, `setup`. **Sin** ningún script con `prisma db push`. *(NFR-006, FR-004, SC-008)*
 
 ## Fase A — TypeScript estricto real *(FR-001 → SC-001)*
 
-- [ ] **T010** Editar `tsconfig.json`: `noUncheckedIndexedAccess: true`, `noImplicitOverride: true` (mantener `strict: true`).
-- [ ] **T011** Añadir path aliases en `tsconfig.json`: `@/modules/*`, `@/shared/*`, `@/config/*` (además de `@/*`).
-- [ ] **T012** **Verificar SC-001**: introducir temporalmente un acceso indexado sin guard y comprobar que `pnpm typecheck` falla; revertir.
+- [x] **T010** Editar `tsconfig.json`: `noUncheckedIndexedAccess: true`, `noImplicitOverride: true` (mantener `strict: true`).
+- [x] **T011** Añadir path aliases en `tsconfig.json`: `@/modules/*`, `@/shared/*`, `@/config/*` (además de `@/*`).
+- [x] **T012** **Verificar SC-001**: introducir temporalmente un acceso indexado sin guard y comprobar que `pnpm typecheck` falla; revertir. *(Verificado: `arr[0].length` sin guard → `error TS2532: Object is possibly 'undefined'`; revertido.)*
 
 ## Fase B — Linter con fronteras de arquitectura *(FR-002 → SC-002, SC-003, SC-009)*
 
-- [ ] **T020** Instalar `eslint-plugin-boundaries` (dev). *(consultar Context7 por la API de la versión)*
-- [ ] **T021** En `eslint.config.mjs`: definir `settings["boundaries/elements"]` para `config`, `shared`, `module`, `domain`, `application`, `infrastructure`, `presentation`, `app`.
-- [ ] **T022** Regla de **dirección de dependencia** entre capas (`presentation → application → domain`; `infrastructure → application/domain`; `domain` no depende de nadie).
-- [ ] **T023** `no-restricted-imports` en `**/domain/**`: prohibir `next`, `next/*`, `@prisma/client`, `prisma`, `next-auth`, `@auth/*`.
-- [ ] **T024** Regla que prohíbe *deep-imports* entre módulos: solo `@/modules/<x>` (index) es importable desde otro módulo.
-- [ ] **T025** **Verificar SC-002/SC-003/SC-009** con imports-trampa temporales; `pnpm lint` debe fallar en cada caso; revertir.
+- [x] **T020** Instalar `eslint-plugin-boundaries` (dev). *(consultar Context7 por la API de la versión)*
+- [x] **T021** En `eslint.config.mjs`: definir `settings["boundaries/elements"]` para `config`, `shared`, `module`, `domain`, `application`, `infrastructure`, `presentation`, `app`.
+- [x] **T022** Regla de **dirección de dependencia** entre capas (`presentation → application → domain`; `infrastructure → application/domain`; `domain` no depende de nadie).
+- [x] **T023** `no-restricted-imports` en `**/domain/**`: prohibir `next`, `next/*`, `@prisma/client`, `prisma`, `next-auth`, `@auth/*`.
+- [x] **T024** Regla que prohíbe *deep-imports* entre módulos: solo `@/modules/<x>` (index) es importable desde otro módulo.
+- [x] **T025** **Verificar SC-002/SC-003/SC-009** con imports-trampa temporales; `pnpm lint` debe fallar en cada caso; revertir. *(Verificado: `@prisma/client` en `domain/` → "domain/ no debe importar Prisma"; deep-import a `infrastructure/` desde `app/` → `no-restricted-imports` + `boundaries/dependencies`; revertido.)*
 
 ## Fase C — Env fail-fast con Zod *(FR-003 → SC-004)*
 
@@ -78,9 +78,9 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 
 ## Fase H — Cierre
 
-- [ ] **T080** Recorrer [quickstart.md](quickstart.md) end-to-end en limpio y confirmar cada comando.
-- [ ] **T081** Marcar [checklists/requirements.md](checklists/requirements.md) al 100%.
-- [ ] **T082** Confirmar SC-001..SC-009 verdes y actualizar el estado del [spec.md](spec.md) a "Implementado".
+- [x] **T080** Recorrer [quickstart.md](quickstart.md) end-to-end en limpio y confirmar cada comando. *(Verificado: `typecheck`/`lint`/`test` en verde; `migrate status` = 1 migración con RLS; `AUTH_SECRET= pnpm build` aborta nombrando la variable; los tres casos-trampa fallan como se espera.)*
+- [x] **T081** Marcar [checklists/requirements.md](checklists/requirements.md) al 100%.
+- [x] **T082** Confirmar SC-001..SC-009 verdes y actualizar el estado del [spec.md](spec.md) a "Implementado".
 
 ---
 

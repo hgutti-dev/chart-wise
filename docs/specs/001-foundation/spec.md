@@ -1,7 +1,7 @@
 # Fase 1 — Fundación: rieles del proyecto
 
 - **Feature:** `001-foundation`
-- **Estado:** Draft para revisión
+- **Estado:** Implementado
 - **Fecha:** 2026-07-09
 - **Constitución:** [../../spec.md](../../spec.md) — este spec **hereda** sus principios y no los repite.
 - **Artefactos hermanos:** [plan.md](plan.md) · [tasks.md](tasks.md) · [data-model.md](data-model.md) · [research.md](research.md) · [quickstart.md](quickstart.md) · [checklists/requirements.md](checklists/requirements.md)
