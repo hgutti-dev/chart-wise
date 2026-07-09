@@ -89,6 +89,7 @@ La fase está completa cuando:
 - [ ] [checklists/requirements.md](checklists/requirements.md) al 100%.
 
 ## 8. Troubleshooting
+- **`P1000: Authentication failed` en local (Windows)** → ya hay un Postgres **nativo** escuchando en `5432` y `localhost` resuelve a él en vez de al contenedor. Usa otro puerto de host: `DB_HOST_PORT=5433` en `.env`, ajusta el puerto en `DATABASE_URL`/`DIRECT_URL` y recrea (`pnpm db:down && pnpm db:up`).
 - **`current_setting('app.current_tenant')` da error / ve todo** → la conexión usa un rol con `BYPASSRLS` (p. ej. `postgres`). La app debe usar `app_user` (`NOBYPASSRLS`) y la tabla `FORCE ROW LEVEL SECURITY` (ver [data-model.md](data-model.md) §3).
 - **Migración falla en Neon** → asegúrate de usar `DIRECT_URL` (no la *pooled*) para migrar.
 - **`env.ts` rompe el cliente** → falta `import "server-only"` o hay una variable sin prefijo `NEXT_PUBLIC_` usada en un componente cliente.

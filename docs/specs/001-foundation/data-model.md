@@ -11,7 +11,7 @@
 ## 1. Entidades
 
 ### 1.1 `Tenant` (raíz de tenancy)
-Ancla del aislamiento. No tiene `tenantId` (es el tenant). En Fase 1 se **siembra** para las pruebas; el módulo `tenancy` real (organizaciones, membresías, invitaciones) llega en una fase posterior.
+Ancla del aislamiento **y de facturación**. Un `Tenant` es un **espacio de trabajo (workspace)**: en el plan **individual (B2C)** tiene un único miembro (el propio usuario); en el plan **de equipo (B2B)** tiene varios (vía membresías). No tiene `tenantId` (es el tenant). En Fase 1 se **siembra** para las pruebas; el módulo `tenancy` real (organizaciones, membresías, invitaciones, roles) llega en una fase posterior. La diferencia B2C/B2B es de **onboarding y membresías**, no del mecanismo de aislamiento.
 
 | Campo | Tipo | Reglas |
 |---|---|---|

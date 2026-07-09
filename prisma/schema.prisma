@@ -9,3 +9,26 @@ generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
 }
+
+// Raíz de tenancy: ancla del aislamiento. No tiene tenantId (ES el tenant).
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  notes     Note[]
+}
+
+// Agregado tenant-scoped del módulo `example` (placeholder para probar la multitenancy).
+// RLS (ENABLE/FORCE + POLICY por current_setting('app.current_tenant')) se añade a mano
+// en el SQL de la migración (T043), no se modela aquí.
+model Note {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  title     String
+  body      String?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}

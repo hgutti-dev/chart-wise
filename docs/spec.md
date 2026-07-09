@@ -11,7 +11,13 @@
 
 ## 1. Contexto y propósito
 
-chart-wise es una aplicación SaaS multi-tenant donde un usuario, dentro de una **organización (tenant)**, **sube datasets**, los envía a un **microservicio de análisis externo (FastAPI)** y visualiza los resultados como **dashboards e insights**.
+chart-wise es una aplicación SaaS multi-tenant donde un usuario, dentro de un **espacio de trabajo (tenant)**, **sube datasets**, los envía a un **microservicio de análisis externo (FastAPI)** y visualiza los resultados como **dashboards e insights**.
+
+El *tenant* es la **unidad de aislamiento y de facturación**, y soporta **ambos modelos de negocio**:
+- **Individual (B2C):** el workspace tiene un **único miembro** (el propio usuario). Al registrarse se le aprovisiona su espacio personal; nunca ve el concepto "organización".
+- **Equipo (B2B):** el mismo workspace con **varios miembros** (vía membresías, invitaciones y roles del contexto `tenancy`).
+
+No son dos arquitecturas: es la misma, con distinto número de miembros. El aislamiento por `tenantId` + RLS aplica igual en ambos casos.
 
 Esta spec gobierna **cómo se organiza el código** para que:
 

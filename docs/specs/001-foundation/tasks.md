@@ -40,11 +40,11 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 
 - [x] **T040** `docker-compose.yml` con `postgres:16` (usuario/roles según [data-model.md](data-model.md) §RLS).
 - [x] **T041** Instalar `prisma`/`@prisma/client` **v7** + `@prisma/adapter-pg`, `pg`, `dotenv`. `schema.prisma`: `datasource` sin URLs + generador `prisma-client` (`output = ../src/generated/prisma`). `prisma.config.ts` a mano: `datasource.url = env("DIRECT_URL")` (migraciones) con `dotenv`; el cliente runtime usa `DATABASE_URL` vía adapter. *(Prisma 7: conexión fuera del schema.)*
-- [ ] **T042** Modelar en `schema.prisma`: `Tenant` y `Note` (tenant-scoped) según [data-model.md](data-model.md).
-- [ ] **T043** Generar migración `--create-only` y **editar el SQL** para añadir: rol de app sin `BYPASSRLS`, `ENABLE`/`FORCE ROW LEVEL SECURITY` en `Note`, y `CREATE POLICY` por `current_setting('app.current_tenant')`.
-- [ ] **T044** Aplicar con `prisma migrate dev`; confirmar `prisma migrate status` ≥ 1 migración.
-- [ ] **T045** `prisma/seed.ts`: crear tenants A y B (para tests de aislamiento). Script `db:seed`.
-- [ ] **T046** **Verificar SC-005/SC-008**: el SQL migrado contiene las sentencias RLS; `package.json` no tiene `db push`.
+- [x] **T042** Modelar en `schema.prisma`: `Tenant` y `Note` (tenant-scoped) según [data-model.md](data-model.md).
+- [x] **T043** Generar migración `--create-only` y **editar el SQL** para añadir: rol de app sin `BYPASSRLS`, `ENABLE`/`FORCE ROW LEVEL SECURITY` en `Note`, y `CREATE POLICY` por `current_setting('app.current_tenant')`.
+- [x] **T044** Aplicar con `prisma migrate dev`; confirmar `prisma migrate status` ≥ 1 migración.
+- [x] **T045** `prisma/seed.ts` (upsert tenants A y B para tests de aislamiento), corre como owner vía adapter. Prisma 7: comando declarado en `prisma.config.ts` (`migrations.seed = "tsx prisma/seed.ts"`) + `tsx` (dev). Script `db:seed`.
+- [x] **T046** **Verificar SC-005/SC-008**: el SQL migrado contiene las sentencias RLS; `package.json` no tiene `db push`.
 
 ## Fase E — Primitivas compartidas *(FR-005)*
 
