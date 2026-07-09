@@ -250,6 +250,16 @@ Cada módulo tiene un `di.ts` (composition root) que instancia repositorios, ser
 **Decisión:** cada módulo expone `index.ts`; se prohíben *deep-imports* entre módulos, verificado con `dependency-cruiser` o `eslint-plugin-boundaries` **y** con `tests/architecture/`.
 **Consecuencias:** violar un límite rompe el build/los tests, no depende de revisión manual.
 
+### ADR-006 — Modelo de datos conceptual y decisiones que condicionan el schema
+**Contexto:** hay decisiones de **forma del dato** (identidad, unicidad, borrado, i18n, multi-tenancy) que son baratas de tomar antes de escribir la primera consulta y **caras o imposibles** de revertir con datos reales. El modelo completo del producto debe estar **definido** aunque cada entidad se implemente por fase.
+**Decisión:** se fija el modelo conceptual en [data-model.md](data-model.md) (*define ahora, usa después*) y se cierran cuatro decisiones:
+1. **`slug` editable** con `previousSlugs[]` + redirect 301; el `slug` **nunca** es clave de consulta (se resuelve a `tenantId`).
+2. **Borrado selectivo:** soft (`deletedAt`) en `Tenant`/`Dashboard`; hard (cascada) en `Dataset`/`Analysis`/`Invitation`/`Membership`.
+3. **i18n en `Tenant` desde el día 1:** `timezone`/`currency`/`locale`; todo timestamp en DB es `timestamptz` UTC.
+4. **Multi-tenancy real:** `User N—N Tenant` vía `Membership` (`UNIQUE(userId, tenantId)`, roles `OWNER|ADMIN|MEMBER|VIEWER`); UI de una org en MVP.
+Como corolario: **IDs `uuid`** (la RLS depende de `::uuid`) e índices obligatorios `@@index([tenantId])` + `@@unique([tenantId, id])` en cada tabla de negocio.
+**Consecuencias:** la Fase 1 hace un **retrofit aditivo** (columnas i18n + `previousSlugs` + `deletedAt` en `Tenant`; `@@unique([tenantId, id])` en `Note`). **RLS por tabla, la Prisma Client Extension (auto-inyección de `tenantId`/`deletedAt`), el redirect 301 y la purga a 30 días quedan DIFERIDOS** a la fase de su módulo, con su propio ADR; no se adelantan.
+
 ---
 
 ## 9. Requisitos funcionales (arquitectura)
@@ -296,6 +306,6 @@ Cada módulo tiene un `di.ts` (composition root) que instancia repositorios, ser
 
 ## 14. Preguntas abiertas
 
-Ninguna bloqueante. Pendientes menores para el spec de datos:
+El modelo de datos conceptual y sus decisiones de forma quedan **cerrados** en [data-model.md](data-model.md) (ADR-006). Pendientes menores no bloqueantes:
 - Estrategia exacta de *storage* de archivos (S3/R2 vía presign — implícito en `uploads/presign`).
 - Si `Insight` es entidad propia o value object dentro de `Dashboard` (se decidirá en el spec de analytics).

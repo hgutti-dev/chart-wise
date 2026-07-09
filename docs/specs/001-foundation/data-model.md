@@ -16,9 +16,16 @@ Ancla del aislamiento **y de facturación**. Un `Tenant` es un **espacio de trab
 | Campo | Tipo | Reglas |
 |---|---|---|
 | `id` | `uuid` (PK) | generado por la DB |
-| `slug` | `text` UNIQUE | identificador legible en URLs |
+| `slug` | `text` UNIQUE | identificador legible en URLs; **nunca** es clave de consulta (se resuelve a `id`) |
 | `name` | `text` | no vacío |
 | `createdAt` | `timestamptz` | default `now()` |
+| `timezone` | `text` | default `"UTC"` (IANA) · *retrofit ADR-006* |
+| `currency` | `text` | default `"USD"` (ISO 4217) · *retrofit ADR-006* |
+| `locale` | `text` | default `"es"` · *retrofit ADR-006* |
+| `previousSlugs` | `text[]` | default `[]`; slugs anteriores para redirect 301 · *retrofit ADR-006* |
+| `deletedAt` | `timestamptz?` | soft delete (D2); `null` = activo · *retrofit ADR-006* |
+
+> **Retrofit aditivo (ADR-006).** Las cinco últimas columnas se añaden en una migración posterior al `init`, **sin RLS ni datos que romper** (`Tenant` no está bajo RLS y las columnas traen `DEFAULT`). El modelo conceptual completo del producto vive en [../../data-model.md](../../data-model.md).
 
 ### 1.2 `Note` (módulo `example`, tenant-scoped)
 Agregado de referencia. **Placeholder**: se elimina o sustituye cuando lleguen los módulos reales.
@@ -31,7 +38,7 @@ Agregado de referencia. **Placeholder**: se elimina o sustituye cuando lleguen l
 | `body` | `text` | opcional |
 | `createdAt` | `timestamptz` | default `now()` |
 
-**Índices:** `Note(tenantId)` para el filtrado por tenant.
+**Índices:** `@@index([tenantId])` (filtrado por tenant) + `@@unique([tenantId, id])` (FKs tenant-safe; *retrofit ADR-006*).
 **RLS:** habilitada y forzada sobre `Note` (ver §3).
 
 ## 2. `schema.prisma` (ilustrativo)
@@ -50,11 +57,16 @@ generator client {
 }
 
 model Tenant {
-  id        String   @id @default(uuid()) @db.Uuid
-  slug      String   @unique
-  name      String
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  notes     Note[]
+  id            String    @id @default(uuid()) @db.Uuid
+  slug          String    @unique
+  name          String
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  timezone      String    @default("UTC")   // retrofit ADR-006
+  currency      String    @default("USD")   // retrofit ADR-006
+  locale        String    @default("es")    // retrofit ADR-006
+  previousSlugs String[]  @default([])       // retrofit ADR-006
+  deletedAt     DateTime? @db.Timestamptz(6) // retrofit ADR-006 (soft delete)
+  notes         Note[]
 }
 
 model Note {
@@ -65,6 +77,7 @@ model Note {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@unique([tenantId, id])   // retrofit ADR-006: FKs tenant-safe
   @@index([tenantId])
 }
 ```

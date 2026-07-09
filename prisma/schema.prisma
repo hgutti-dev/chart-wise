@@ -11,12 +11,19 @@ generator client {
 }
 
 // Raíz de tenancy: ancla del aislamiento. No tiene tenantId (ES el tenant).
+// Retrofit ADR-006 (define ahora, usa después): i18n, slugs previos y soft delete.
+// El slug NUNCA es clave de consulta: se resuelve a id y se descarta.
 model Tenant {
-  id        String   @id @default(uuid()) @db.Uuid
-  slug      String   @unique
-  name      String
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  notes     Note[]
+  id            String    @id @default(uuid()) @db.Uuid
+  slug          String    @unique
+  name          String
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  timezone      String    @default("UTC")
+  currency      String    @default("USD")
+  locale        String    @default("es")
+  previousSlugs String[]  @default([])
+  deletedAt     DateTime? @db.Timestamptz(6)
+  notes         Note[]
 }
 
 // Agregado tenant-scoped del módulo `example` (placeholder para probar la multitenancy).
@@ -30,5 +37,7 @@ model Note {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  // Retrofit ADR-006: índice obligatorio de tabla de negocio -> FKs tenant-safe.
+  @@unique([tenantId, id])
   @@index([tenantId])
 }
