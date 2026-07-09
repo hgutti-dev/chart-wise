@@ -30,16 +30,16 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 
 ## Fase C — Env fail-fast con Zod *(FR-003 → SC-004)*
 
-- [ ] **T030** Instalar `zod` y `server-only` (dev/prod según corresponda).
-- [ ] **T031** `src/config/env.ts`: esquema Zod (`NODE_ENV`, `AUTH_SECRET`, `DATABASE_URL`, `DIRECT_URL`); parsear `process.env` al cargar; en error `throw` con mensaje formateado (nombre de variable). `import "server-only"` arriba.
-- [ ] **T032** `next.config.ts`: importar `./src/config/env` para forzar validación en `next build`.
-- [ ] **T033** `.env.example` con las variables requeridas (sin valores reales). *(seguridad: nunca commitear secretos)*
-- [ ] **T034** **Verificar SC-004**: sin `AUTH_SECRET`, `next build`/arranque aborta nombrando la variable.
+- [x] **T030** Instalar `zod` y `server-only` (dev/prod según corresponda).
+- [x] **T031** `src/config/env.ts`: esquema Zod (`NODE_ENV`, `AUTH_SECRET`, `DATABASE_URL`, `DIRECT_URL`); parsear `process.env` al cargar; en error `throw` con mensaje formateado (nombre de variable). `import "server-only"` arriba. *(Split en `env.schema.ts` sin `server-only` para que `next.config.ts` pueda importarlo.)*
+- [x] **T032** `next.config.ts`: importar `./src/config/env` para forzar validación en `next build`.
+- [x] **T033** `.env.example` con las variables requeridas (sin valores reales). *(seguridad: nunca commitear secretos)*
+- [x] **T034** **Verificar SC-004**: sin `AUTH_SECRET`, `next build`/arranque aborta nombrando la variable.
 
 ## Fase D — Postgres + Prisma + primera migración multitenant *(FR-004 → SC-005, SC-008)*
 
-- [ ] **T040** `docker-compose.yml` con `postgres:16` (usuario/roles según [data-model.md](data-model.md) §RLS).
-- [ ] **T041** Instalar `prisma` (dev) y `@prisma/client`; `prisma init` (o `schema.prisma` a mano) con `datasource` usando `DATABASE_URL` + `directUrl = DIRECT_URL`.
+- [x] **T040** `docker-compose.yml` con `postgres:16` (usuario/roles según [data-model.md](data-model.md) §RLS).
+- [x] **T041** Instalar `prisma`/`@prisma/client` **v7** + `@prisma/adapter-pg`, `pg`, `dotenv`. `schema.prisma`: `datasource` sin URLs + generador `prisma-client` (`output = ../src/generated/prisma`). `prisma.config.ts` a mano: `datasource.url = env("DIRECT_URL")` (migraciones) con `dotenv`; el cliente runtime usa `DATABASE_URL` vía adapter. *(Prisma 7: conexión fuera del schema.)*
 - [ ] **T042** Modelar en `schema.prisma`: `Tenant` y `Note` (tenant-scoped) según [data-model.md](data-model.md).
 - [ ] **T043** Generar migración `--create-only` y **editar el SQL** para añadir: rol de app sin `BYPASSRLS`, `ENABLE`/`FORCE ROW LEVEL SECURITY` en `Note`, y `CREATE POLICY` por `current_setting('app.current_tenant')`.
 - [ ] **T044** Aplicar con `prisma migrate dev`; confirmar `prisma migrate status` ≥ 1 migración.

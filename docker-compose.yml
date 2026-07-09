@@ -1,0 +1,25 @@
+# Postgres local para desarrollo y tests de aislamiento (Fase 1 / T040).
+# Levanta el rol owner/superusuario (postgres) usado por DIRECT_URL para migrar.
+# El rol de app `app_user` (NOBYPASSRLS) lo crea el SQL de la migración (T043, data-model §RLS),
+# no este compose.
+services:
+  postgres:
+    image: postgres:16
+    container_name: chartwise-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chartwise
+    ports:
+      - "5432:5432"
+    volumes:
+      - chartwise-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d chartwise"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  chartwise-pgdata:

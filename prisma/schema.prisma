@@ -1,0 +1,11 @@
+datasource db {
+  provider = "postgresql"
+  // Prisma 7: las URLs de conexión NO van aquí.
+  //  - Migraciones/CLI  -> prisma.config.ts (datasource.url = DIRECT_URL, rol owner).
+  //  - Cliente runtime  -> driver adapter @prisma/adapter-pg con DATABASE_URL (rol app_user).
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}

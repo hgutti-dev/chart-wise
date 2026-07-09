@@ -36,17 +36,17 @@ Agregado de referencia. **Placeholder**: se elimina o sustituye cuando lleguen l
 
 ## 2. `schema.prisma` (ilustrativo)
 
-> Confirmar sintaxis con Context7 (Prisma 6) en implementación.
+> **Prisma 7.** Las URLs de conexión **no** van en `schema.prisma`: se configuran en `prisma.config.ts` (migraciones/CLI) y en el driver adapter del cliente (runtime). Confirmar sintaxis con Context7 (Prisma 7) en implementación.
 
 ```prisma
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")   // pooled (Neon)
-  directUrl = env("DIRECT_URL")     // directa, para migraciones
+  provider = "postgresql"
+  // Prisma 7: sin url/directUrl aquí (ver prisma.config.ts + adapter más abajo).
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 model Tenant {
@@ -67,6 +67,29 @@ model Note {
 
   @@index([tenantId])
 }
+```
+
+**Conexión (Prisma 7, fuera del schema).** El CLI migra con la conexión **directa** (owner) y el cliente en runtime usa el pool `app_user` vía adapter:
+
+```ts
+// prisma.config.ts (raíz) — usado por el CLI (migrate, db pull, studio)
+import "dotenv/config";                    // Prisma 7 no auto-carga .env
+import { defineConfig, env } from "prisma/config";
+
+export default defineConfig({
+  schema: "prisma/schema.prisma",
+  migrations: { path: "prisma/migrations" },
+  datasource: { url: env("DIRECT_URL") },  // conexión directa (owner) para migrar
+});
+```
+
+```ts
+// runtime (infraestructura): el cliente conecta como app_user (NOBYPASSRLS)
+import { PrismaClient } from "@/generated/prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const prisma = new PrismaClient({ adapter });
 ```
 
 ## 3. RLS: aislamiento desde la primera migración (SQL editado a mano)

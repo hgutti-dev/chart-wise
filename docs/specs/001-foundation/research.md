@@ -34,6 +34,7 @@
 - **Decisión:** `prisma migrate dev` con migraciones en `prisma/migrations/`. Local con Docker (`postgres:16`), remoto con **Neon**. `package.json` no expone `db push`.
 - **Alternativas:** `prisma db push` (rápido en prototipos) → **descartado**: no deja historial, imposible de auditar/revertir, y "un proyecto que llegará a producción" no debe nacer así.
 - **Racional:** migraciones = historia revisable del schema; requisito para meter RLS como SQL versionado.
+- **Versión:** Prisma **7** (driver adapters). La conexión sale del schema: `prisma.config.ts` (migraciones/CLI, `DIRECT_URL`) + `@prisma/adapter-pg` en runtime (`DATABASE_URL`). El generador `prisma-client-js` (Prisma ≤ 6) se descartó por quedar deprecado en 7; se usa `prisma-client` con `output` propio.
 
 ## R5 — Neon como Postgres remoto *(FR-004)*
 - **Contexto:** se necesita un Postgres gestionado para entornos remotos, compatible con RLS.
@@ -46,7 +47,7 @@
 - **Decisión:** rol de app `NOBYPASSRLS`; `ENABLE` + `FORCE ROW LEVEL SECURITY`; policy por `current_setting('app.current_tenant')`; el repositorio hace `SET LOCAL` dentro de la transacción.
 - **Alternativas:** confiar solo en `where tenantId` en cada repositorio → **descartado**: un olvido = fuga entre tenants; RLS es la red de seguridad.
 - **Racional:** defensa en profundidad; el fallo seguro es "cero filas". Verificado por el test de aislamiento (SC-006).
-- **Nota:** confirmar con Context7 el patrón vigente de `SET LOCAL` + transacciones en Prisma 6 (`$transaction` / `$executeRaw`).
+- **Nota:** confirmar con Context7 el patrón vigente de `SET LOCAL` + transacciones en Prisma 7 con el driver adapter `@prisma/adapter-pg` (`$transaction` / `$executeRaw`).
 
 ## R7 — `Result<T, E>` + `DomainError` *(FR-005)*
 - **Contexto:** distinguir errores **esperados** (email duplicado, permiso denegado, título vacío) de **inesperados**.
