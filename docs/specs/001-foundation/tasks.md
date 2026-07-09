@@ -70,11 +70,11 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 
 ## Fase G — Vitest: dominio + aislamiento *(FR-007 → SC-006, SC-007)*
 
-- [ ] **T070** Instalar y configurar Vitest (`vitest.config.ts`), separando proyecto de dominio (sin DB) del de integración.
-- [ ] **T071** `tests/unit/example/note.spec.ts`: test de dominio de `Note.create` (ok para válido, `DomainError` para título vacío). **Debe pasar.** *(SC-007)*
-- [ ] **T072** `tests/architecture/dependency-rule.spec.ts`: test que falla si `domain/` importa framework/infra o si hay deep-imports (respaldo del linter). *(NFR-001)*
-- [ ] **T073** `tests/isolation/note-tenant-isolation.spec.ts`: con tenant B activo, leer la `Note` del tenant A → **cero filas** (integración, requiere Postgres). *(SC-006)*
-- [ ] **T074** **Verificar SC-007**: `pnpm test` (o `vitest run`) en verde.
+- [x] **T070** Instalar y configurar Vitest (`vitest.config.ts`), separando proyecto de dominio (sin DB) del de integración. *(v4.1: `test.projects` con `extends: true`; alias único `@`→`src`; el proyecto `integration` carga `.env` vía `setupFiles`.)*
+- [x] **T071** `tests/unit/example/note.spec.ts`: test de dominio de `Note.create` (ok para válido, `DomainError` para título vacío). **Debe pasar.** *(SC-007)*
+- [x] **T072** `tests/architecture/dependency-rule.spec.ts`: test que falla si `domain/` importa framework/infra o si hay deep-imports (respaldo del linter). *(NFR-001)* *(Lee los fuentes como texto, no los importa —así no arrastra `server-only`—; verificado con imports-trampa temporales que rompen ambas aserciones.)*
+- [x] **T073** `tests/isolation/note-tenant-isolation.spec.ts`: con tenant B activo, leer la `Note` del tenant A → **cero filas** (integración, requiere Postgres). *(SC-006)* *(Consulta cruda filtrando solo por `id` bajo el contexto del tenant B → prueba que RLS niega por sí sola, no solo el `where`; control positivo bajo el tenant A evita el falso verde.)*
+- [x] **T074** **Verificar SC-007**: `pnpm test` (o `vitest run`) en verde. *(10/10: 7 unit + 3 integración; `typecheck` y `lint` también en verde.)*
 
 ## Fase H — Cierre
 
