@@ -56,15 +56,17 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 
 ## Fase F — Esqueleto + módulo `example` *(FR-006 → SC-009)*
 
-- [ ] **T060** Crear árbol de carpetas: `src/{config,shared,modules}`, `tests/{unit,integration,isolation,architecture}`.
-- [ ] **T061** `modules/example/domain/value-objects/note-title.ts`: VO con validación (no vacío, longitud), devuelve `Result`.
-- [ ] **T062** `modules/example/domain/errors/*`: p. ej. `EmptyNoteTitleError extends DomainError`.
-- [ ] **T063** `modules/example/domain/entities/note.ts`: agregado `Note` con factory `create(...) : Result<Note, DomainError>`.
-- [ ] **T064** `modules/example/domain/ports/note.repository.ts`: interfaz del repositorio (recibe `TenantContext`).
-- [ ] **T065** `modules/example/application/use-cases/create-note.ts`: caso de uso que usa el puerto y devuelve `Result`.
-- [ ] **T066** `modules/example/infrastructure/persistence/prisma-note.repository.ts` (+ mapper): implementa el puerto; hace `SET LOCAL app.current_tenant` desde el `TenantContext` y filtra por `tenantId`.
-- [ ] **T067** `modules/example/di.ts`: composition root del módulo (real vs. fake según entorno).
-- [ ] **T068** `modules/example/index.ts`: API pública (exporta solo el caso de uso / tipos necesarios).
+> **Decisión de diseño (frontera de capas).** El puerto del repositorio recibe el `tenantId` tipado como **`TenantId`** (branded type en `src/shared/domain/tenant-id.ts`), **no** el objeto `TenantContext`. `TenantContext = { userId, tenantId, role }` es un concepto de *autorización*; un repositorio solo necesita el discriminador de aislamiento. Pasarle el `TenantContext` completo violaría ISP y acoplaría persistencia a autenticación. `TenantContext` se **compone sobre** `TenantId` (dependencia hacia adentro), por lo que el dominio puede nombrarlo sin romper la regla de fronteras — sin excepciones en `eslint.config.mjs`.
+
+- [x] **T060** Crear árbol de carpetas: `src/{config,shared,modules}`, `tests/{unit,integration,isolation,architecture}`.
+- [x] **T061** `modules/example/domain/value-objects/note-title.ts`: VO con validación (no vacío, longitud), devuelve `Result`.
+- [x] **T062** `modules/example/domain/errors/*`: p. ej. `EmptyNoteTitleError extends DomainError`.
+- [x] **T063** `modules/example/domain/entities/note.ts`: agregado `Note` (id `NoteId` branded) con factory `create(...) : Result<Note, DomainError>`.
+- [x] **T064** `modules/example/domain/ports/note.repository.ts`: interfaz del repositorio. `findById(tenantId: TenantId, id: NoteId)` recibe el `tenantId` (branded), **no** el `TenantContext`; `save(note)` no lo recibe porque la entidad ya transporta su `tenantId`.
+- [x] **T065** `modules/example/application/use-cases/create-note.ts`: caso de uso que traduce el borde (`TenantContext` → `tenantId`), genera id/reloj fuera del dominio y devuelve `Result`.
+- [x] **T066** `modules/example/infrastructure/persistence/prisma-note.repository.ts` (+ mapper): implementa el puerto; dentro de una transacción fija el tenant con `set_config('app.current_tenant', $tenantId, true)` (parametrizado; `SET LOCAL` no admite bind params) y filtra por `tenantId`.
+- [x] **T067** `modules/example/di.ts`: composition root del módulo (Prisma real vs. `InMemoryNoteRepository` fake según entorno).
+- [x] **T068** `modules/example/index.ts`: API pública (exporta solo el composition root / tipos / errores necesarios).
 
 ## Fase G — Vitest: dominio + aislamiento *(FR-007 → SC-006, SC-007)*
 
