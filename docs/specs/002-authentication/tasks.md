@@ -1,0 +1,107 @@
+# Fase 2 — Tareas
+
+- **Feature:** `002-authentication`
+- **Spec:** [spec.md](spec.md) · **Plan:** [plan.md](plan.md) · **Data model:** [data-model.md](data-model.md)
+- **Estado:** Pendiente de implementación
+
+Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin dependencia con las tareas [P] hermanas del mismo grupo). Cada tarea nombra el/los archivo(s) y el requisito que satisface. Antes de tocar Auth.js/adapter/hasher/Prisma, **consultar Context7**.
+
+---
+
+## Fase 0 — Preparación
+
+- [ ] **T001** Instalar `next-auth@5` (beta, **versión fijada**), `@auth/prisma-adapter` y el hasher bcrypt (`bcryptjs` por defecto; `@node-rs/bcrypt` si hace falta rendimiento). *(FR-003, R1, R3)*
+- [ ] **T002** Extender `src/config/env.schema.ts`: `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` (requeridos), `APP_URL` (con default). Actualizar `.env.example` con *placeholders* (sin secretos reales). *(FR-011, SC-010)*
+- [ ] **T003** Consultar **Context7** para la API vigente de Auth.js v5, `@auth/prisma-adapter`, el hasher y Prisma 7 antes de fijar firmas. *(disciplina global)*
+
+## Fase A — Costura de eventos en `shared` *(FR-010)*
+
+- [ ] **T010 [P]** `src/shared/domain/domain-event.ts`: base `DomainEvent` (nombre/tipo + `occurredAt` inyectado, no generado en el dominio). Sin imports de framework/infra.
+- [ ] **T011 [P]** `src/shared/application/event-bus.ts`: puerto `EventBus` (`publish`, `subscribe`). Interfaz pura.
+- [ ] **T012** `src/shared/infrastructure/in-memory-event-bus.ts`: implementación síncrona in-memory del puerto.
+- [ ] **T013** `tests/unit/shared/event-bus.spec.ts`: publicar un evento → los handlers suscritos lo reciben (en verde).
+
+## Fase B — Data model de identidad *(FR-002 → SC-003, SC-013)*
+
+- [ ] **T020** `prisma/schema.prisma`: modelos `User`/`Account`/`VerificationToken` (uuid `@db.Uuid`, **sin `tenantId`, sin `Session`**) según [data-model.md](data-model.md). Confirmar los nombres de columna de `Account` con Context7 (`@auth/prisma-adapter`).
+- [ ] **T021** Generar migración `prisma migrate dev --create-only` y **editar el SQL**: `GRANT SELECT, INSERT, UPDATE, DELETE` a `app_user` en `User`/`Account`/`VerificationToken` (**sin** RLS: no son *tenant-scoped*). Aplicar con `migrate dev`; regenerar el cliente.
+- [ ] **T022** **Verificar SC-003**: `prisma migrate status` ≥ 2 migraciones; `grep -R "model Session" prisma/schema.prisma` sin coincidencias; `pnpm typecheck` en verde con el cliente regenerado.
+
+## Fase C — Dominio de `identity` *(FR-001, FR-004, FR-005 → SC-004, SC-005)*
+
+- [ ] **T030 [P]** `modules/identity/domain/value-objects/email.ts`: `create(raw): Result<Email, InvalidEmailError>` — normaliza a minúsculas + `trim`, valida forma.
+- [ ] **T031 [P]** `modules/identity/domain/value-objects/password.ts`: `create(plain): Result<Password, WeakPasswordError>` — mínimo 8, **≤ 72 bytes** (límite bcrypt).
+- [ ] **T032 [P]** `modules/identity/domain/value-objects/password-hash.ts`: envuelve un hash `$2*`; nunca serializa al cliente.
+- [ ] **T033 [P]** `modules/identity/domain/errors/*`: `InvalidEmailError`, `WeakPasswordError`, `InvalidCredentialsError`, `EmailAlreadyRegisteredError`, `InvalidVerificationTokenError` (extends `DomainError`, `code` namespaced `identity.*`).
+- [ ] **T034** `modules/identity/domain/entities/user.ts`: entidad `User` (id `UserId` branded) con factory `create(...): Result<User, DomainError>`.
+- [ ] **T035** `modules/identity/domain/ports/user.repository.ts`: interfaz (`findByEmail`, `findById`, `save`). Recibe tipos de dominio, no `TenantContext` (identidad no es *tenant-scoped*).
+- [ ] **T036** `modules/identity/domain/events/user-registered.event.ts`: `UserRegistered extends DomainEvent`.
+- [ ] **T037** `tests/unit/identity/{email,password}.spec.ts`. **Verificar SC-004, SC-005.**
+
+## Fase D — Casos de uso *(FR-004, FR-007, FR-012 → SC-006, SC-007, SC-008, SC-009)*
+
+- [ ] **T040 [P]** `modules/identity/application/ports/password-hasher.ts` (`hash`, `compare`) y `email-sender.ts` (`sendVerification`). Puertos de servicio (aplicación).
+- [ ] **T041** `modules/identity/application/use-cases/register-user.ts`: normaliza email, rechaza duplicado (`EmailAlreadyRegisteredError`), hashea vía `PasswordHasher`, persiste `User`, publica `UserRegistered`. **Crea solo `User`** (nada de Tenant/Membership).
+- [ ] **T042** `modules/identity/application/use-cases/authenticate-credentials.ts`: busca por email; ejecuta `compare` bcrypt **siempre** (contra hash *dummy* si el email no existe → tiempo constante); mismo `InvalidCredentialsError` para email inexistente y contraseña incorrecta.
+- [ ] **T043 [P]** `request-email-verification.ts` (crea `VerificationToken` + `EmailSender`, misma respuesta conocido/desconocido) y `verify-email.ts` (consume token, fija `emailVerified`; rechaza expirado/usado/de otro identifier).
+- [ ] **T044 [P]** `modules/identity/application/use-cases/get-current-user.ts`: resuelve el `User` autenticado (DTO plano, sin `passwordHash`).
+- [ ] **T045 [P]** `modules/identity/application/redirect/resolve-internal-redirect.ts`: helper **puro** — acepta solo rutas relativas *same-origin*, descarta absolutas/externas a un default seguro.
+- [ ] **T046** `modules/identity/infrastructure/persistence/in-memory-user.repository.ts` (fake para unit) + fakes de `PasswordHasher`/`EmailSender`/`EventBus` en los tests.
+- [ ] **T047** `tests/unit/identity/{register-user,authenticate-credentials,verify-email,resolve-internal-redirect}.spec.ts`. **Verificar SC-006, SC-007, SC-008, SC-009.**
+
+## Fase E — Infraestructura + Auth.js *(FR-003, FR-006, FR-009, FR-013 → SC-002, SC-011, SC-013, SC-015)*
+
+- [ ] **T050** `modules/identity/infrastructure/persistence/prisma-user.repository.ts` + `mappers/user.mapper.ts`: implementa `UserRepository` con el cliente generado. **Sin** `set_config('app.current_tenant')` (no *tenant-scoped*).
+- [ ] **T051** `modules/identity/infrastructure/crypto/bcrypt-hasher.ts`: implementa `PasswordHasher` (rounds ≥ 10–12). *(Context7 por la API del hasher.)*
+- [ ] **T052** `modules/identity/infrastructure/email/fake-email-sender.ts`: implementa `EmailSender` (consola/in-memory; registra los envíos para el test).
+- [ ] **T053** `modules/identity/infrastructure/auth/auth.config.ts`: providers (Credentials → `AuthenticateCredentialsUseCase`; Google con `allowDangerousEmailAccountLinking: false`), `PrismaAdapter` → cliente generado (cast acotado si el tipo lo pide), `session.strategy:"jwt"` + `maxAge`, callbacks `jwt`/`session` (exponen `user.id`/`emailVerified`; **reservan** `activeTenantId?`/`role?`). *(Context7.)*
+- [ ] **T054** `modules/identity/infrastructure/auth/next-auth.d.ts`: augmentación de tipos (`session.user.id`, `emailVerified`, reservados) — **dentro** de `infrastructure/auth/` (confinamiento).
+- [ ] **T055** `modules/identity/di.ts` + `index.ts`: composition root e **API pública** (exporta `handlers`/`auth`/`signIn`/`signOut`, casos de uso wired, schemas Zod, errores, tipo de sesión).
+- [ ] **T056** `app/api/auth/[...nextauth]/route.ts`: `export const { GET, POST } = handlers` importando `handlers` desde `@/modules/identity` (no `next-auth` directo).
+- [ ] **T057** **Confinamiento (enforcement nuevo)**: override `no-restricted-imports` por glob en `eslint.config.mjs` (prohíbe `next-auth`/`@auth/*` en `src/**` salvo `**/infrastructure/auth/**`) + aserción en `tests/architecture/dependency-rule.spec.ts`. **Verificar SC-002** con un import-trampa fuera del directorio permitido; revertir.
+- [ ] **T058** `tests/integration/identity/adapter-grants.spec.ts`: como `app_user`, ejercitar `createUser → linkAccount → getUserByAccount` y `createVerificationToken → useVerificationToken`. **Verificar SC-013.**
+- [ ] **T059** `tests/unit/identity/auth-config.spec.ts`: config assertion (`session.strategy === "jwt"`, `maxAge` fijado, Google `allowDangerousEmailAccountLinking: false`) — **SC-015**; confirmar que `pnpm typecheck` accede a `session.user.id`/reservados — **SC-011**.
+
+## Fase F — Presentation + `app/` *(FR-007, FR-008, FR-012)*
+
+- [ ] **T060 [P]** `modules/identity/presentation/schemas/{register,login}.schema.ts`: schemas Zod (frontera de validación).
+- [ ] **T061 [P]** `modules/identity/presentation/components/{register-form,login-form}.tsx`: componentes cliente que **reciben la acción por props** (no importan `next-auth` ni `di`).
+- [ ] **T062** `app/(public)/actions/{register,login,logout}.action.ts`: Server Actions (`"use server"`) que componen vía `@/modules/identity` (`RegisterUser` / `signIn` / `signOut`), validan con el schema Zod y traducen `Result`.
+- [ ] **T063** `app/(public)/{login,register,verify-email}/page.tsx`: renderizan los forms y les pasan la acción; `verify-email` invoca `VerifyEmail` con el token de la URL.
+- [ ] **T064** `app/(private)/layout.tsx`: gate — `auth()`; si no hay sesión, `redirect("/login")` (respetando `resolveInternalRedirect`). `app/(private)/profile/page.tsx`: muestra el usuario (DTO) + botón de logout.
+- [ ] **T065** `src/config/routes.ts`: listas de rutas públicas/privadas (consumidas por el middleware).
+
+## Fase G — Middleware + env final *(FR-008, FR-011 → SC-010, SC-012)*
+
+- [ ] **T070** `src/middleware.ts` (Edge): redirección por **presencia de la cookie** de sesión usando `config/routes.ts`; `matcher` excluyendo estáticos. **Sin** importar Prisma ni `next-auth`/`@auth/*`.
+- [ ] **T071** **Verificar SC-012**: `grep -R "prisma\|next-auth\|@auth" src/middleware.ts` sin coincidencias; ruta privada sin cookie → redirect a `/login`.
+- [ ] **T072** **Verificar SC-010**: `AUTH_GOOGLE_ID= pnpm build` aborta nombrando la variable.
+
+## Fase H — Arquitectura + cierre
+
+- [ ] **T080** **Verificar SC-001/SC-002/SC-014** con imports-trampa temporales: `identity/domain` importando `@auth/*` → lint/test fallan (SC-001); `next-auth` fuera de `infrastructure/auth` → fallan (SC-002); deep-import `@/modules/identity/domain/...` → fallan (SC-014). Revertir.
+- [ ] **T081** Registrar **ADR-007** en la constitución [../../spec.md](../../spec.md) §8: alcance AuthN-only de `identity`, confinamiento de Auth.js y trabajo diferido a `tenancy`.
+- [ ] **T082** Recorrer [quickstart.md](quickstart.md) end-to-end; marcar [checklists/requirements.md](checklists/requirements.md) al 100%; actualizar el `Estado` de [spec.md](spec.md) a "Implementado".
+
+---
+
+### Trazabilidad requisito → tareas
+
+| Requisito | Tareas |
+|---|---|
+| FR-001 | T030–T037, T057 (dominio + API pública) |
+| FR-002 | T020–T022, T058 |
+| FR-003 | T001, T053, T055, T056, T057, T059 |
+| FR-004 | T041, T042, T046, T047 |
+| FR-005 | T030–T032, T037 |
+| FR-006 | T053, T058 |
+| FR-007 | T043, T052, T063 |
+| FR-008 | T064, T065, T070, T071 |
+| FR-009 | T053, T054, T059 |
+| FR-010 | T010–T013, T041 |
+| FR-011 | T002, T072 |
+| FR-012 | T045, T047, T064 |
+| FR-013 | T037, T047, T057, T058, T059 |
+| NFR-002 (confinamiento) | T053, T054, T056, T057, T080 |
+| NFR-005/006 (no enumeración) | T042, T047 |
+| SC-013 (grants adapter) | T021, T050, T058 |
