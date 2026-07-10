@@ -41,3 +41,52 @@ model Note {
   @@unique([tenantId, id])
   @@index([tenantId])
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Identidad (módulo `identity`, Fase 2). AuthN only. Ver docs/specs/002-authentication/data-model.md.
+// NO son tenant-scoped: un User es una identidad global entre tenants -> SIN tenantId,
+// SIN RLS y SIN el par @@index([tenantId]) + @@unique([tenantId, id]). Solo GRANT a
+// app_user (editado a mano en el SQL de la migración). SIN tabla de sesión (estrategia JWT).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Identidad global de una persona. `email` normalizado (VO Email) y único global.
+// `passwordHash` null en cuentas solo-OAuth; `emailVerified` null = no verificado.
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique
+  name          String?
+  image         String?
+  passwordHash  String?
+  emailVerified DateTime? @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  accounts      Account[]
+}
+
+// Proveedor OAuth (Google) vinculado a un User. Forma estándar del adapter de Auth.js:
+// los nombres de columna son los que el adapter espera (confirmados con Context7).
+model Account {
+  id                String  @id @default(uuid()) @db.Uuid
+  userId            String  @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// Token de verificación de email. Forma estándar del adapter: clave compuesta, sin `id` propio.
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime @db.Timestamptz(6)
+
+  @@unique([identifier, token])
+}
