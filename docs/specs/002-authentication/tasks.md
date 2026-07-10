@@ -16,10 +16,10 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 
 ## Fase A — Costura de eventos en `shared` *(FR-010)*
 
-- [ ] **T010 [P]** `src/shared/domain/domain-event.ts`: base `DomainEvent` (nombre/tipo + `occurredAt` inyectado, no generado en el dominio). Sin imports de framework/infra.
-- [ ] **T011 [P]** `src/shared/application/event-bus.ts`: puerto `EventBus` (`publish`, `subscribe`). Interfaz pura.
-- [ ] **T012** `src/shared/infrastructure/in-memory-event-bus.ts`: implementación síncrona in-memory del puerto.
-- [ ] **T013** `tests/unit/shared/event-bus.spec.ts`: publicar un evento → los handlers suscritos lo reciben (en verde).
+- [x] **T010 [P]** `src/shared/domain/domain-event.ts`: base `DomainEvent` (nombre/tipo + `occurredAt` inyectado, no generado en el dominio). Sin imports de framework/infra.
+- [x] **T011 [P]** `src/shared/application/event-bus.ts`: puerto `EventBus` (`publish`, `subscribe`). Interfaz pura.
+- [x] **T012** `src/shared/infrastructure/in-memory-event-bus.ts`: implementación síncrona in-memory del puerto.
+- [x] **T013** `tests/unit/shared/event-bus.spec.ts`: publicar un evento → los handlers suscritos lo reciben (en verde).
 
 ## Fase B — Data model de identidad *(FR-002 → SC-003, SC-013)*
 
