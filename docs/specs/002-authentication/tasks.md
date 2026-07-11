@@ -75,9 +75,9 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 
 ## Fase G — Middleware + env final *(FR-008, FR-011 → SC-010, SC-012)*
 
-- [ ] **T070** `src/middleware.ts` (Edge): redirección por **presencia de la cookie** de sesión usando `config/routes.ts`; `matcher` excluyendo estáticos. **Sin** importar Prisma ni `next-auth`/`@auth/*`.
-- [ ] **T071** **Verificar SC-012**: `grep -R "prisma\|next-auth\|@auth" src/middleware.ts` sin coincidencias; ruta privada sin cookie → redirect a `/login`.
-- [ ] **T072** **Verificar SC-010**: `AUTH_GOOGLE_ID= pnpm build` aborta nombrando la variable.
+- [x] **T070** `src/proxy.ts` (convención `proxy` de Next 16, antes `middleware`): redirección por **presencia de la cookie** de sesión (`authjs.session-token` / `__Secure-…`) usando `config/routes.ts`; `matcher` excluyendo API/estáticos. **Sin** importar Prisma ni Auth.js. TDD (4 tests con `NextRequest` reales). NOTA: el `proxy` corre en runtime **Node** por defecto (el `middleware` era Edge), pero se mantiene deliberadamente sin acceso a DB (gate barato); la NFR-003 del spec dice "Edge" y quedaría por actualizar a "runtime del proxy (Node)".
+- [x] **T071** **SC-012 verificado**: `grep -R "prisma\|next-auth\|@auth" src/proxy.ts` sin coincidencias; en vivo, `/profile` sin cookie → 307 a `/login?callbackUrl=%2Fprofile` (proxy) y con cookie inválida → el layout `auth()` la rebota a `/login`.
+- [x] **T072** **SC-010 verificado**: `AUTH_GOOGLE_ID= pnpm build` aborta con `AUTH_GOOGLE_ID es obligatorio` (fail-fast en `next.config.ts` → `parseEnv`).
 
 ## Fase H — Arquitectura + cierre
 
