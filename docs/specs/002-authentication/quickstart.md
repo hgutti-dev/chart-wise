@@ -55,7 +55,7 @@ pnpm db:migrate   # prisma migrate dev  → crea las 3 tablas (uuid), sin Sessio
 | 5 | `pnpm db:migrate` | Crea `User`/`Account`/`VerificationToken` (uuid) | SC-003 |
 | 6 | `grep -R "model Session" prisma/schema.prisma` | **Sin coincidencias** | SC-003 |
 | 7 | `AUTH_GOOGLE_ID= pnpm build` | **Aborta** nombrando `AUTH_GOOGLE_ID` | SC-010 |
-| 8 | `grep -R "prisma\|next-auth\|@auth" src/middleware.ts` | **Sin coincidencias** | SC-012 |
+| 8 | `grep -R "prisma\|next-auth\|@auth" src/proxy.ts` | **Sin coincidencias** | SC-012 |
 | 9 | `pnpm test` | Unit: `Email`/`Password`/`RegisterUser`/`AuthenticateCredentials`/`VerifyEmail`/`resolveInternalRedirect` en verde | SC-004, SC-005, SC-006, SC-007, SC-008, SC-009 |
 | 10 | `pnpm test` | Integración: camino del adapter como `app_user` (createUser/linkAccount/verifyToken) | SC-013 |
 | 11 | `pnpm test` | Config assertion: `strategy:"jwt"` + `maxAge` + `allowDangerousEmailAccountLinking:false` | SC-015 |
@@ -88,13 +88,13 @@ Fase 2 **no** añade scripts nuevos; reutiliza los de la Fase 1:
 
 ## 7. Definición de "hecho" (Fase 2)
 La fase está completa cuando:
-- [ ] `pnpm typecheck` verde con el contrato de sesión (SC-011).
-- [ ] `pnpm lint` verde y SC-001/SC-002/SC-014 demostrados con imports-trampa.
-- [ ] `pnpm db:migrate` crea las 3 tablas sin `Session` (SC-003).
-- [ ] `AUTH_GOOGLE_ID= pnpm build` aborta (SC-010) y `middleware.ts` sin Prisma/Auth.js (SC-012).
-- [ ] `pnpm test` verde: unit (SC-004, SC-005, SC-006, SC-007, SC-008, SC-009), integración del adapter (SC-013), config (SC-015).
-- [ ] **ADR-007** registrado en [../../spec.md](../../spec.md) §8.
-- [ ] [checklists/requirements.md](checklists/requirements.md) al 100%.
+- [x] `pnpm typecheck` verde con el contrato de sesión (SC-011).
+- [x] `pnpm lint` verde y SC-001/SC-002/SC-014 demostrados con imports-trampa.
+- [x] `pnpm db:migrate` crea las 3 tablas sin `Session` (SC-003).
+- [x] `AUTH_GOOGLE_ID= pnpm build` aborta (SC-010) y `proxy.ts` sin Prisma/Auth.js (SC-012).
+- [x] `pnpm test` verde: unit (SC-004, SC-005, SC-006, SC-007, SC-008, SC-009), integración del adapter (SC-013), config (SC-015).
+- [x] **ADR-007** registrado en [../../spec.md](../../spec.md) §8.
+- [x] [checklists/requirements.md](checklists/requirements.md) al 100%.
 
 ## 8. Troubleshooting
 - **`UnsupportedStrategy` / login OAuth rompe** → falta fijar `session.strategy:"jwt"`. Con un adapter presente Auth.js usa `database` por defecto, y no existe tabla `Session`. Fíjalo explícito (SC-015).

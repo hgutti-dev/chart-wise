@@ -81,9 +81,9 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 
 ## Fase H — Arquitectura + cierre
 
-- [ ] **T080** **Verificar SC-001/SC-002/SC-014** con imports-trampa temporales: `identity/domain` importando `@auth/*` → lint/test fallan (SC-001); `next-auth` fuera de `infrastructure/auth` → fallan (SC-002); deep-import `@/modules/identity/domain/...` → fallan (SC-014). Revertir.
-- [ ] **T081** Registrar **ADR-007** en la constitución [../../spec.md](../../spec.md) §8: alcance AuthN-only de `identity`, confinamiento de Auth.js y trabajo diferido a `tenancy`.
-- [ ] **T082** Recorrer [quickstart.md](quickstart.md) end-to-end; marcar [checklists/requirements.md](checklists/requirements.md) al 100%; actualizar el `Estado` de [spec.md](spec.md) a "Implementado".
+- [x] **T080** **SC-001/SC-002/SC-014 verificados** con imports-trampa: `domain` importando `@auth/*` → lint + arch test fallan (SC-001); `next-auth` en `app/` → fallan (SC-002); deep-import `@/modules/identity/domain/...` → fallan (SC-014, y además boundaries `app→domain`). Revertido; lint + arch test en verde.
+- [x] **T081** **ADR-007** registrado en la constitución [../../spec.md](../../spec.md) §8: alcance AuthN-only de `identity`, confinamiento de Auth.js (`proxy.ts` incluido) y trabajo diferido a `tenancy`/*hardening*.
+- [x] **T082** [quickstart.md](quickstart.md) recorrido (mapa comando→SC confirmado); [checklists/requirements.md](checklists/requirements.md) al 100% (B–G marcados con evidencia); `Estado` de [spec.md](spec.md) → "Implementado".
 
 ---
 

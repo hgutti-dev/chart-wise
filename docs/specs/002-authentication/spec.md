@@ -1,7 +1,7 @@
 # Fase 2 — Autenticación: identidad con Auth.js v5
 
 - **Feature:** `002-authentication`
-- **Estado:** Draft para revisión
+- **Estado:** Implementado (2026-07-10) — Fases A–H completas; SC-001..SC-015 verdes y reproducibles.
 - **Fecha:** 2026-07-09
 - **Constitución:** [../../spec.md](../../spec.md) — este spec **hereda** sus principios y no los repite.
 - **Modelo conceptual:** [../../data-model.md](../../data-model.md) (entidades de `identity`).
