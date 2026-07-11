@@ -81,6 +81,27 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Organic — paleta fija (crema/salvia) para las vistas de auth. Namespace propio
+     `--cw-*`: no colisiona con los tokens shadcn de arriba y no se sobrescribe en `.dark`,
+     así que las pantallas de auth se ven igual en claro y oscuro (como el diseño). */
+  --cw-bg: #f5ead8;
+  --cw-surface: #ebddc5;
+  --cw-text: #201e1d;
+  --cw-accent: #c67139;
+  --cw-accent-600: #b2622d;
+  --cw-accent-700: #8c491a;
+  --cw-accent-100: #fff2eb;
+  --cw-accent-700-ink: #8c491a;
+  --cw-accent-800: #643312;
+  --cw-sage: #7a8a5e;
+  --cw-sage-800: #3d472b;
+  --cw-sage-700: #56633f;
+  --cw-sage-200: #e1eecc;
+  --cw-sage-700-ink: #56633f;
+  --cw-divider: color-mix(in srgb, #201e1d 16%, transparent);
+  --cw-muted: color-mix(in srgb, #201e1d 55%, transparent);
+  --cw-radius: 999px;
 }
 
 .dark {
@@ -127,4 +148,61 @@
   html {
     @apply font-sans;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Organic — clases para las vistas de auth (tokens `--cw-*` en `:root`).
+   En `@layer components` para que Turbopack dev no las descarte (no deben
+   quedar como CSS sin capa tras un `@layer`) y sin colisionar con utilidades.
+   ───────────────────────────────────────────────────────────── */
+@layer components {
+
+/* Utilidades de superficie */
+.cw-page   { background: var(--cw-bg); color: var(--cw-text); font-family: var(--font-figtree), system-ui, sans-serif; }
+.cw-head   { font-family: var(--font-caprasimo), Georgia, serif; font-weight: 400; letter-spacing: -0.015em; line-height: 1.12; }
+.cw-muted  { color: var(--cw-muted); }
+.cw-card   { background: var(--cw-surface); border-radius: 32px; }
+
+/* Inputs (píldora) */
+.cw-input {
+  width: 100%; min-height: 40px; padding: 8px 16px; font-size: 14px;
+  color: var(--cw-text); caret-color: var(--cw-accent);
+  background: var(--cw-surface);
+  border: 1px solid var(--cw-divider); border-radius: var(--cw-radius);
+  outline: none; transition: border-color .15s;
+}
+.cw-input::placeholder { color: var(--cw-muted); }
+.cw-input:hover { border-color: color-mix(in srgb, var(--cw-text) 45%, transparent); }
+.cw-input:focus-visible { border-color: var(--cw-accent); }
+.cw-input[aria-invalid="true"] { border-color: var(--cw-accent-700); }
+.cw-label { display:block; font-size:12px; margin-bottom:5px; color: color-mix(in srgb, var(--cw-text) 70%, transparent); }
+
+/* Botones */
+.cw-btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  cursor:pointer; text-decoration:none; border:1px solid transparent;
+  font-family: var(--font-caprasimo), Georgia, serif; font-weight:400; font-size:14px; line-height:1.2;
+  padding:11px 18px; border-radius: var(--cw-radius); color: var(--cw-text);
+  background: transparent; transition: background .15s, color .15s;
+}
+.cw-btn:disabled { opacity:.6; cursor:not-allowed; }
+.cw-btn-block { width:100%; }
+.cw-btn-primary { background: var(--cw-accent); color: var(--cw-bg); }
+.cw-btn-primary:hover:not(:disabled) { background: var(--cw-accent-600); }
+.cw-btn-primary:active:not(:disabled) { background: var(--cw-accent-700); }
+.cw-btn-secondary { border-color: var(--cw-divider); }
+.cw-btn-secondary:hover:not(:disabled) { background: color-mix(in srgb, var(--cw-text) 7%, transparent); }
+.cw-btn-ghost { color: var(--cw-accent); padding-inline: 6px; }
+.cw-btn-ghost:hover:not(:disabled) { background: color-mix(in srgb, var(--cw-accent) 10%, transparent); }
+
+/* Enlaces y foco */
+.cw-page a { color: var(--cw-accent); text-underline-offset: 3px; }
+.cw-page a:hover { color: var(--cw-accent-600); }
+.cw-page :focus-visible { outline: 2px solid var(--cw-accent); outline-offset: 2px; }
+
+/* Tags */
+.cw-tag { display:inline-flex; align-items:center; gap:5px; font-size:11px; padding:3px 12px; border-radius:999px; }
+.cw-tag-sage    { background: var(--cw-sage-200); color: var(--cw-sage-700-ink); }
+.cw-tag-neutral { background: #f9f4ed; color: #474238; }
+
 }

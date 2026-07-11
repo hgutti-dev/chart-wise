@@ -1,17 +1,16 @@
 import Link from "next/link";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { AuthShell, OrDivider } from "@/components/auth/auth-shell";
+import { GoogleIcon } from "@/components/auth/google-icon";
 import { LoginForm } from "@/modules/identity";
 
+import { googleSignInAction } from "../actions/google.action";
 import { loginAction } from "../actions/login.action";
 
-// Vista de login (no endpoint): renderiza el form y le pasa el Server Action por props.
+export const metadata = { title: "Inicia sesión · chart-wise" };
+
+// Vista de login (no endpoint): renderiza el form y le pasa el Server Action por props. El
+// botón de Google usa su propio Server Action (provider ya configurado en identity/auth).
 export default async function LoginPage({
   searchParams,
 }: {
@@ -20,30 +19,48 @@ export default async function LoginPage({
   const { callbackUrl, registered } = await searchParams;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Inicia sesión</CardTitle>
-        <CardDescription>Accede a tu cuenta de chart-wise.</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {registered ? (
-          <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm">
-            Cuenta creada. Revisa tu email para verificarla e inicia sesión.
+    <AuthShell
+      heading="Bienvenido de vuelta"
+      sub="Inicia sesión en tu cuenta de chart-wise."
+      aside={
+        <>
+          <h2 className="cw-head text-[color:var(--cw-bg)] mb-3" style={{ fontSize: 30 }}>
+            Tus dashboards te esperan.
+          </h2>
+          <p className="opacity-80 m-0">
+            Retoma donde tu organización lo dejó — cada dataset e insight, justo donde estaban.
           </p>
+        </>
+      }
+    >
+      {registered ? (
+        <div
+          className="mb-4 text-[13px] rounded-2xl px-3 py-2"
+          style={{ background: "var(--cw-sage-200)", color: "var(--cw-sage-700-ink)" }}
+        >
+          Cuenta creada. Revisa tu email para verificarla e inicia sesión.
+        </div>
+      ) : null}
+
+      <form action={googleSignInAction}>
+        {callbackUrl ? (
+          <input type="hidden" name="callbackUrl" value={callbackUrl} />
         ) : null}
+        <button type="submit" className="cw-btn cw-btn-secondary cw-btn-block gap-[10px]">
+          <GoogleIcon /> Continuar con Google
+        </button>
+      </form>
 
-        <LoginForm action={loginAction} callbackUrl={callbackUrl} />
+      <OrDivider />
 
-        <p className="text-center text-sm text-muted-foreground">
-          ¿No tienes cuenta?{" "}
-          <Link
-            href="/register"
-            className="font-medium text-foreground underline underline-offset-4"
-          >
-            Crea una
-          </Link>
-        </p>
-      </CardContent>
-    </Card>
+      <LoginForm action={loginAction} callbackUrl={callbackUrl} />
+
+      <p className="mt-6 text-[13.5px]" style={{ color: "var(--cw-muted)" }}>
+        ¿No tienes cuenta?{" "}
+        <Link href="/register" className="font-semibold">
+          Crea una
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

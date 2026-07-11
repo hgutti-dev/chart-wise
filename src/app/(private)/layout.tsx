@@ -14,5 +14,7 @@ export default async function PrivateLayout({
     redirect(LOGIN_ROUTE);
   }
 
-  return <main className="mx-auto w-full max-w-2xl px-4 py-10">{children}</main>;
+  // Pass-through: las vistas privadas (perfil) montan su propia navegación Organic a pantalla
+  // completa. El gate de arriba es la comprobación autoritativa; aquí no se añade layout.
+  return <>{children}</>;
 }
