@@ -37,9 +37,16 @@ export async function registerAction(
     };
   }
 
-  // Verificación de email en el mismo momento del registro (FR-007). Best-effort: el
-  // FakeEmailSender imprime el enlace por consola en desarrollo.
-  await identity.requestEmailVerification.execute(parsed.data.email);
+  // Verificación de email en el mismo momento del registro (FR-007). Best-effort REAL: la
+  // cuenta YA está confirmada, así que un fallo INESPERADO al emitir el token o enviar el
+  // correo (p. ej. un error transitorio de DB, o un EmailSender real más adelante) NO debe
+  // abortar el redirect de éxito. Se registra para no perder observabilidad (no se silencia);
+  // el `redirect` queda FUERA del try para que su NEXT_REDIRECT se propague siempre.
+  try {
+    await identity.requestEmailVerification.execute(parsed.data.email);
+  } catch (error) {
+    console.error("[register] fallo al emitir la verificación de email", error);
+  }
 
   redirect("/login?registered=1");
 }
