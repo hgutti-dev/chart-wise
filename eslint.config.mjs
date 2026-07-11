@@ -23,6 +23,15 @@ const DEEP_MODULE_IMPORT = {
     "Importa un módulo solo por su API pública: @/modules/<módulo> (su index.ts). Los deep-imports entre módulos están prohibidos.",
 };
 
+// Auth.js confinado (NFR-002): `next-auth`/`@auth/*` SOLO bajo infrastructure/auth/. Mitiga
+// los breaking changes de la beta de v5 acotando el radio a un directorio. El middleware.ts
+// (Edge) queda cubierto por esta misma regla (no está clasificado por boundaries/elements).
+const AUTH_JS_CONFINEMENT = {
+  group: ["next-auth", "next-auth/*", "@auth/*"],
+  message:
+    "Auth.js (next-auth/@auth) solo puede importarse bajo src/modules/*/infrastructure/auth/** (confinamiento NFR-002).",
+};
+
 // Allowed dependency direction per element type (Clean Architecture): domain
 // points to nobody but the shared kernel + config; outer layers point inward.
 const LAYER_POLICIES = [
@@ -113,10 +122,25 @@ const eslintConfig = defineConfig([
   },
 
   // Deterministic guard: no deep-imports across modules (only the public index).
+  // Baseline for ALL src (incl. infrastructure/auth/, which must still be deep-import-safe).
   {
     files: ["src/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": ["error", { patterns: [DEEP_MODULE_IMPORT] }],
+    },
+  },
+
+  // Deterministic guard: Auth.js confinement (NFR-002 / SC-002). Applies to all src EXCEPT
+  // infrastructure/auth/. Flat-config is last-match-wins per rule, so this re-declares
+  // DEEP_MODULE_IMPORT to keep it active here; the domain block below wins for domain/.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/modules/*/infrastructure/auth/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        { patterns: [DEEP_MODULE_IMPORT, AUTH_JS_CONFINEMENT] },
+      ],
     },
   },
 

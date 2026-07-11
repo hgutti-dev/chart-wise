@@ -51,25 +51,27 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 
 ## Fase E — Infraestructura + Auth.js *(FR-003, FR-006, FR-009, FR-013 → SC-002, SC-011, SC-013, SC-015)*
 
-- [ ] **T050** `modules/identity/infrastructure/persistence/prisma-user.repository.ts` + `mappers/user.mapper.ts`: implementa `UserRepository` con el cliente generado. **Sin** `set_config('app.current_tenant')` (no *tenant-scoped*).
-- [ ] **T051** `modules/identity/infrastructure/crypto/bcrypt-hasher.ts`: implementa `PasswordHasher` (rounds ≥ 10–12). *(Context7 por la API del hasher.)*
-- [ ] **T052** `modules/identity/infrastructure/email/fake-email-sender.ts`: implementa `EmailSender` (consola/in-memory; registra los envíos para el test).
-- [ ] **T053** `modules/identity/infrastructure/auth/auth.config.ts`: providers (Credentials → `AuthenticateCredentialsUseCase`; Google con `allowDangerousEmailAccountLinking: false`), `PrismaAdapter` → cliente generado (cast acotado si el tipo lo pide), `session.strategy:"jwt"` + `maxAge`, callbacks `jwt`/`session` (exponen `user.id`/`emailVerified`; **reservan** `activeTenantId?`/`role?`). *(Context7.)*
-- [ ] **T054** `modules/identity/infrastructure/auth/next-auth.d.ts`: augmentación de tipos (`session.user.id`, `emailVerified`, reservados) — **dentro** de `infrastructure/auth/` (confinamiento).
-- [ ] **T055** `modules/identity/di.ts` + `index.ts`: composition root e **API pública** (exporta `handlers`/`auth`/`signIn`/`signOut`, casos de uso wired, schemas Zod, errores, tipo de sesión).
-- [ ] **T056** `app/api/auth/[...nextauth]/route.ts`: `export const { GET, POST } = handlers` importando `handlers` desde `@/modules/identity` (no `next-auth` directo).
-- [ ] **T057** **Confinamiento (enforcement nuevo)**: override `no-restricted-imports` por glob en `eslint.config.mjs` (prohíbe `next-auth`/`@auth/*` en `src/**` salvo `**/infrastructure/auth/**`) + aserción en `tests/architecture/dependency-rule.spec.ts`. **Verificar SC-002** con un import-trampa fuera del directorio permitido; revertir.
-- [ ] **T058** `tests/integration/identity/adapter-grants.spec.ts`: como `app_user`, ejercitar `createUser → linkAccount → getUserByAccount` y `createVerificationToken → useVerificationToken`. **Verificar SC-013.**
-- [ ] **T059** `tests/unit/identity/auth-config.spec.ts`: config assertion (`session.strategy === "jwt"`, `maxAge` fijado, Google `allowDangerousEmailAccountLinking: false`) — **SC-015**; confirmar que `pnpm typecheck` accede a `session.user.id`/reservados — **SC-011**.
+- [x] **T050** `modules/identity/infrastructure/persistence/prisma-user.repository.ts` + `mappers/user.mapper.ts`: implementa `UserRepository` con el cliente generado. **Sin** `set_config('app.current_tenant')` (no *tenant-scoped*). *(+ `prisma-verification-token.repository.ts`, necesario para cablear `VerifyEmail`/`RequestEmailVerification` en el di.)*
+- [x] **T051** `modules/identity/infrastructure/crypto/bcrypt-hasher.ts`: implementa `PasswordHasher` (rounds = 12, bcryptjs).
+- [x] **T052** `modules/identity/infrastructure/email/fake-email-sender.ts`: implementa `EmailSender` (consola/in-memory; registra los envíos y construye el enlace con la base URL inyectada).
+- [x] **T053** `modules/identity/infrastructure/auth/auth.config.ts`: `buildAuthConfig` (puro, testeable) + `authorizeCredentials` extraído; providers (Credentials → `AuthenticateCredentials`; Google `allowDangerousEmailAccountLinking: false`), `session.strategy:"jwt"` + `maxAge`, callbacks `jwt`/`session` (exponen `user.id`/`emailVerified`; **reservan** `activeTenantId?`/`role?`). El `PrismaAdapter` + `NextAuth()` viven en `create-auth.ts` (cast acotado).
+- [x] **T054** `modules/identity/infrastructure/auth/next-auth.d.ts`: augmentación de tipos (`session.user.id`, `emailVerified`, reservados) — **dentro** de `infrastructure/auth/` (confinamiento).
+- [x] **T055** `modules/identity/di.ts` + `index.ts`: composition root e **API pública** (exporta `handlers`/`auth`/`signIn`/`signOut`, casos de uso wired, errores, tipo de sesión `AppSession`). *(Los schemas Zod de presentation son de Fase F.)*
+- [x] **T056** `app/api/auth/[...nextauth]/route.ts`: `export const { GET, POST } = handlers` importando `handlers` desde `@/modules/identity` (no `next-auth` directo).
+- [x] **T057** **Confinamiento (enforcement nuevo)**: override `no-restricted-imports` por glob en `eslint.config.mjs` (prohíbe `next-auth`/`@auth/*` en `src/**` salvo `**/infrastructure/auth/**`) + aserción en `tests/architecture/dependency-rule.spec.ts`. **SC-002 verificado** con import-trampa (lint + test fallan) y revertido.
+- [x] **T058** `tests/integration/identity/adapter-grants.spec.ts`: como `app_user`, ejercita `createUser → linkAccount → getUserByAccount` y `createVerificationToken → useVerificationToken`. **SC-013 verificado.**
+- [x] **T059** `tests/unit/identity/auth-config.spec.ts`: config assertion (`session.strategy === "jwt"`, `maxAge` fijado, Google `allowDangerousEmailAccountLinking: false`) — **SC-015**; acceso a `session.user.id`/reservados compila en `pnpm typecheck` — **SC-011**.
 
 ## Fase F — Presentation + `app/` *(FR-007, FR-008, FR-012)*
 
-- [ ] **T060 [P]** `modules/identity/presentation/schemas/{register,login}.schema.ts`: schemas Zod (frontera de validación).
-- [ ] **T061 [P]** `modules/identity/presentation/components/{register-form,login-form}.tsx`: componentes cliente que **reciben la acción por props** (no importan `next-auth` ni `di`).
-- [ ] **T062** `app/(public)/actions/{register,login,logout}.action.ts`: Server Actions (`"use server"`) que componen vía `@/modules/identity` (`RegisterUser` / `signIn` / `signOut`), validan con el schema Zod y traducen `Result`.
-- [ ] **T063** `app/(public)/{login,register,verify-email}/page.tsx`: renderizan los forms y les pasan la acción; `verify-email` invoca `VerifyEmail` con el token de la URL.
-- [ ] **T064** `app/(private)/layout.tsx`: gate — `auth()`; si no hay sesión, `redirect("/login")` (respetando `resolveInternalRedirect`). `app/(private)/profile/page.tsx`: muestra el usuario (DTO) + botón de logout.
-- [ ] **T065** `src/config/routes.ts`: listas de rutas públicas/privadas (consumidas por el middleware).
+- [x] **T060 [P]** `modules/identity/presentation/schemas/{register,login}.schema.ts` (+ `fields.ts` con el email compartido): schemas Zod (frontera de validación) que reflejan el VO `Email`/`Password`. TDD (12 casos).
+- [x] **T061 [P]** `modules/identity/presentation/components/{register-form,login-form}.tsx`: componentes cliente (shadcn `Field`/`Input`/`Button`, `useActionState`) que **reciben la acción por props** (no importan `next-auth` ni `di`). Contrato `AuthFormState` en `presentation/action-state.ts`.
+- [x] **T062** `app/(public)/actions/{register,login,logout}.action.ts`: Server Actions (`"use server"`) que componen vía `@/modules/identity` (`RegisterUser`+`RequestEmailVerification` / `signInWithCredentials` / `signOut`), validan con el schema Zod y traducen `Result`. El `AuthError` de Auth.js se traduce en el wrapper confinado `infrastructure/auth/credentials-sign-in.ts` (app/ no importa `next-auth`).
+- [x] **T063** `app/(public)/{login,register,verify-email}/page.tsx` (+ `(public)/layout.tsx` centrado): renderizan los forms y les pasan la acción; `verify-email` invoca `VerifyEmail` con el token de la URL. **Vistas, no endpoints.**
+- [x] **T064** `app/(private)/layout.tsx`: gate — `auth()`; sin sesión, `redirect("/login")`. `app/(private)/profile/page.tsx`: muestra el `CurrentUserDto` + `<form>` de logout. Verificado en vivo: `/profile` sin sesión → 307 a `/login`.
+- [x] **T065** `src/config/routes.ts`: listas de rutas públicas/privadas + helpers `isPublicRoute`/`isProtectedRoute` (consumidas por el middleware, Fase G). TDD.
+
+> **Fix de seguridad (revisión de Fase E, NFR-006):** `TIMING_SAFE_DUMMY_HASH` en `authenticate-credentials.ts` estaba a coste bcrypt 10 mientras `BcryptHasher` usa 12 → `compare` tardaba distinto según existiera la cuenta (canal lateral de enumeración). Alineado a coste 12 con test de paridad de regresión.
 
 ## Fase G — Middleware + env final *(FR-008, FR-011 → SC-010, SC-012)*
 

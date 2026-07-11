@@ -58,6 +58,11 @@ const FORBIDDEN_IN_DOMAIN = [
 // segmento adicional (`@/modules/<x>/domain/...`) salta la API pública.
 const DEEP_MODULE_IMPORT = /^@\/modules\/[^/]+\/.+/;
 
+// Espejo de AUTH_JS_CONFINEMENT en eslint.config.mjs (NFR-002 / SC-002): `next-auth`/`@auth`
+// SOLO bajo `**/infrastructure/auth/**`. Respaldo del linter para el confinamiento de Auth.js.
+const AUTH_JS_LIBS = [/^next-auth$/, /^next-auth\/.+/, /^@auth\/.+/];
+const AUTH_INFRA_DIR = /modules\/[^/]+\/infrastructure\/auth\//;
+
 const sourceFiles = walk(SRC).map((path) => ({
   path,
   rel: relative(ROOT, path).replace(/\\/g, "/"),
@@ -87,6 +92,18 @@ describe("regla de dependencia (respaldo del linter)", () => {
         .filter((spec) => DEEP_MODULE_IMPORT.test(spec))
         .map((spec) => `${file.rel} -> ${spec}`),
     );
+
+    expect(violations).toEqual([]);
+  });
+
+  it("Auth.js (next-auth/@auth) solo se importa bajo infrastructure/auth/ (NFR-002)", () => {
+    const violations = sourceFiles
+      .filter((file) => !AUTH_INFRA_DIR.test(file.rel))
+      .flatMap((file) =>
+        file.imports
+          .filter((spec) => AUTH_JS_LIBS.some((re) => re.test(spec)))
+          .map((spec) => `${file.rel} -> ${spec}`),
+      );
 
     expect(violations).toEqual([]);
   });
