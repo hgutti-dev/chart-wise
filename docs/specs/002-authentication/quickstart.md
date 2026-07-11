@@ -64,7 +64,8 @@ pnpm db:migrate   # prisma migrate dev  → crea las 3 tablas (uuid), sin Sessio
 ```bash
 pnpm dev
 # 1. /register  → crea User (email+contraseña); revisa la consola: el FakeEmailSender "envía" el enlace de verificación.
-# 2. Abre el enlace /verify-email?token=... → emailVerified queda fijado.
+# 2. Abre el enlace /verify-email?token=...&email=... → emailVerified queda fijado.
+#    (el email/identifier va en el enlace: el token se consume por la clave compuesta (identifier, token), SC-008).
 # 3. /login (credenciales o Google) → redirige a /profile (área privada).
 # 4. Logout desde /profile → vuelve a público; /profile sin sesión redirige a /login.
 ```

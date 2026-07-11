@@ -40,14 +40,14 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 
 ## Fase D — Casos de uso *(FR-004, FR-007, FR-012 → SC-006, SC-007, SC-008, SC-009)*
 
-- [ ] **T040 [P]** `modules/identity/application/ports/password-hasher.ts` (`hash`, `compare`) y `email-sender.ts` (`sendVerification`). Puertos de servicio (aplicación).
-- [ ] **T041** `modules/identity/application/use-cases/register-user.ts`: normaliza email, rechaza duplicado (`EmailAlreadyRegisteredError`), hashea vía `PasswordHasher`, persiste `User`, publica `UserRegistered`. **Crea solo `User`** (nada de Tenant/Membership).
-- [ ] **T042** `modules/identity/application/use-cases/authenticate-credentials.ts`: busca por email; ejecuta `compare` bcrypt **siempre** (contra hash *dummy* si el email no existe → tiempo constante); mismo `InvalidCredentialsError` para email inexistente y contraseña incorrecta.
-- [ ] **T043 [P]** `request-email-verification.ts` (crea `VerificationToken` + `EmailSender`, misma respuesta conocido/desconocido) y `verify-email.ts` (consume token, fija `emailVerified`; rechaza expirado/usado/de otro identifier).
-- [ ] **T044 [P]** `modules/identity/application/use-cases/get-current-user.ts`: resuelve el `User` autenticado (DTO plano, sin `passwordHash`).
-- [ ] **T045 [P]** `modules/identity/application/redirect/resolve-internal-redirect.ts`: helper **puro** — acepta solo rutas relativas *same-origin*, descarta absolutas/externas a un default seguro.
-- [ ] **T046** `modules/identity/infrastructure/persistence/in-memory-user.repository.ts` (fake para unit) + fakes de `PasswordHasher`/`EmailSender`/`EventBus` en los tests.
-- [ ] **T047** `tests/unit/identity/{register-user,authenticate-credentials,verify-email,resolve-internal-redirect}.spec.ts`. **Verificar SC-006, SC-007, SC-008, SC-009.**
+- [x] **T040 [P]** `modules/identity/application/ports/password-hasher.ts` (`hash`, `compare`) y `email-sender.ts` (`sendVerification`). Puertos de servicio (aplicación). *(+ puerto de dominio `verification-token.repository.ts` (`create`/`use`) y entidad `verification-token.ts`, según decisión de fase.)*
+- [x] **T041** `modules/identity/application/use-cases/register-user.ts`: normaliza email, rechaza duplicado (`EmailAlreadyRegisteredError`), hashea vía `PasswordHasher`, persiste `User`, publica `UserRegistered`. **Crea solo `User`** (nada de Tenant/Membership).
+- [x] **T042** `modules/identity/application/use-cases/authenticate-credentials.ts`: busca por email; ejecuta `compare` bcrypt **siempre** (contra hash *dummy* si el email no existe → tiempo constante); mismo `InvalidCredentialsError` para email inexistente y contraseña incorrecta.
+- [x] **T043 [P]** `request-email-verification.ts` (crea `VerificationToken` + `EmailSender`, misma respuesta conocido/desconocido, TTL 24h) y `verify-email.ts` (consume token atómicamente vía `use(identifier, token)`, fija `emailVerified`; rechaza expirado/usado/de otro identifier).
+- [x] **T044 [P]** `modules/identity/application/use-cases/get-current-user.ts`: resuelve el `User` autenticado (`CurrentUserDto` plano, sin `passwordHash`).
+- [x] **T045 [P]** `modules/identity/application/redirect/resolve-internal-redirect.ts`: helper **puro** — acepta solo rutas relativas *same-origin*, descarta absolutas/externas a un default seguro (`/profile`).
+- [x] **T046** `modules/identity/infrastructure/persistence/in-memory-user.repository.ts` + `in-memory-verification-token.repository.ts` (fakes para unit) + fakes de `PasswordHasher`/`EmailSender` en `tests/unit/identity/fakes/` (el `EventBus` usa el `InMemoryEventBus` real).
+- [x] **T047** `tests/unit/identity/{register-user,authenticate-credentials,verify-email,resolve-internal-redirect,get-current-user}.spec.ts`. **SC-006, SC-007, SC-008, SC-009 verificados** (54 unit tests en verde, `typecheck` y `lint` limpios).
 
 ## Fase E — Infraestructura + Auth.js *(FR-003, FR-006, FR-009, FR-013 → SC-002, SC-011, SC-013, SC-015)*
 
