@@ -7,8 +7,10 @@ import type { PasswordHasher } from "../ports/password-hasher";
 
 // Hash bcrypt ficticio con el que se compara cuando el email no existe o la cuenta no tiene
 // credenciales. Sirve para gastar el MISMO tiempo (un `compare` bcrypt) en todos los caminos
-// y no filtrar por temporización si el usuario existe (NFR-006).
-const DUMMY_HASH = `$2b$10$${"x".repeat(53)}`;
+// y no filtrar por temporización si el usuario existe (NFR-006). Su COSTE DEBE coincidir con el
+// de los hashes reales (`BcryptHasher.SALT_ROUNDS`): si difieren, `compare` tarda distinto
+// según exista o no la cuenta y se reabre la enumeración. Un test de paridad fija el invariante.
+export const TIMING_SAFE_DUMMY_HASH = `$2b$12$${"x".repeat(53)}`;
 
 export interface AuthenticateCredentialsInput {
   readonly email: string;
@@ -39,7 +41,7 @@ export class AuthenticateCredentials {
     const email = Email.create(input.email);
     const user = isOk(email) ? await this.users.findByEmail(email.value) : null;
 
-    const hashToCompare = user?.passwordHash?.value ?? DUMMY_HASH;
+    const hashToCompare = user?.passwordHash?.value ?? TIMING_SAFE_DUMMY_HASH;
     const passwordMatches = await this.hasher.compare(input.password, hashToCompare);
 
     if (user === null || user.passwordHash === null || !passwordMatches) {
