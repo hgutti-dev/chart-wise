@@ -1,0 +1,36 @@
+# Contexto de build de Docker. Todo lo que no haga falta dentro de la imagen se
+# excluye para: (1) no filtrar secretos, (2) acelerar el build, (3) evitar que
+# artefactos locales pisen los que la imagen genera.
+
+# Dependencias y artefactos generados (se reinstalan/regeneran dentro de la imagen)
+node_modules
+.next
+out
+build
+coverage
+src/generated
+
+# Secretos y entornos locales — NUNCA deben entrar en la imagen.
+# El entorno (incluido el .env.test de valores dummy) lo inyecta docker-compose por
+# env_file/environment en runtime desde el host; nunca se hornea en la imagen.
+.env
+.env.*
+
+# Git y metadatos
+.git
+.gitignore
+.github
+
+# Documentación y planos (no se necesitan para correr tests)
+docs
+*.md
+
+# Editor / SO
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# El propio Dockerfile y composes no forman parte del contexto útil
+Dockerfile*
+docker-compose*.yml

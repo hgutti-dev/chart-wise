@@ -8,7 +8,7 @@
 ---
 
 ## 0. Requisitos previos
-- Node ≥ 20 LTS · `pnpm` · Docker Desktop.
+- Node ≥ 24 LTS · `pnpm` · Docker Desktop.
 - (Opcional para remoto) Cuenta de **Neon** con una base creada.
 
 ## 1. Instalar dependencias

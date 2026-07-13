@@ -107,7 +107,7 @@ Detalle completo en [data-model.md](data-model.md).
 ## 10. Supuestos y dependencias
 
 - Docker Desktop disponible localmente; cuenta de **Neon** para el Postgres remoto.
-- Node ≥ 20 y **pnpm** como gestor de paquetes (hay `pnpm-lock.yaml` y `pnpm-workspace.yaml`).
+- Node ≥ 24 y **pnpm** como gestor de paquetes (hay `pnpm-lock.yaml` y `pnpm-workspace.yaml`).
 - El proyecto ya está inicializado como Next.js 16 (App Router) + React 19 + Tailwind v4 + shadcn.
 
 ## 11. Preguntas abiertas (no bloqueantes)

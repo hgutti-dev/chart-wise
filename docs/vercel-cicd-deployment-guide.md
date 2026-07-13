@@ -66,7 +66,7 @@ publica Production y un job aplica las migraciones de base de datos de forma con
 |---|---|
 | **Framework** | Next.js **16.2.10** (App Router, RSC) + React **19.2.4** |
 | **Lenguaje** | TypeScript **5** en modo estricto (`strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`) |
-| **Gestor de paquetes** | **pnpm 10.34.5** (fijado en `package.json → packageManager`; última rama 10.x, compatible con Node 20; `pnpm-lock.yaml` con `lockfileVersion: '9.0'`) |
+| **Gestor de paquetes** | **pnpm 11.10.0** (fijado en `package.json → packageManager`; `pnpm-lock.yaml` con `lockfileVersion: '9.0'`) |
 | **Node.js** | **>= 20** (`engines.node` en `package.json`, y `.nvmrc` = `20`) |
 | **Estilos/UI** | Tailwind **v4** (CSS-first, sin `tailwind.config`), shadcn `base-nova` sobre `@base-ui/react` |
 | **Pruebas** | **Vitest 4**, dos proyectos: `unit` (sin DB) e `integration` (con Postgres) |
@@ -77,7 +77,7 @@ publica Production y un job aplica las migraciones de base de datos de forma con
 
 ### Versión recomendada de Node.js
 
-**Node 20 LTS** (coincide con `.nvmrc` y `engines`). Úsala en local, en CI y en Vercel para
+**Node 24 LTS** (coincide con `.nvmrc` y `engines`). Úsala en local, en CI y en Vercel para
 evitar diferencias sutiles de runtime. En Vercel se selecciona en *Project Settings → Node.js
 Version*.
 
@@ -183,17 +183,16 @@ completo en §10. Resumen: **5 requeridas** (`AUTH_SECRET`, `AUTH_GOOGLE_ID`,
 - **Repositorio remoto** en GitHub con la rama `master`.
 - **Docker** instalado y corriendo (Docker Desktop en Windows/Mac). Necesario para las pruebas
   con DB en local y para reproducir el job `docker-validate`.
-- **Node.js 20+** y **pnpm 10.34.5** en local:
+- **Node.js 24+** y **pnpm 11.10.0** en local:
   ```bash
-  node -v            # v20.x o superior (engines pide >=20)
+  node -v            # v24.x o superior (engines pide >=24)
   corepack enable    # habilita pnpm; usará la versión de `packageManager` en package.json
-  pnpm -v            # 10.34.5 (la versión fijada en packageManager)
+  pnpm -v            # 11.10.0 (la versión fijada en packageManager)
   ```
   > La versión de pnpm es **única fuente de verdad** en `package.json → packageManager`
-  > (`pnpm@10.34.5`). En local, con corepack habilitado, pnpm se ajusta a esa versión; CI y
+  > (`pnpm@11.10.0`). En local, con corepack habilitado, pnpm se ajusta a esa versión; CI y
   > Docker la leen del mismo campo, así todos los entornos usan exactamente la misma versión.
-  > Se usa la rama **10.x** (no 11.x) porque el proyecto fija **Node 20** y pnpm 11 exige
-  > Node ≥ 22.13.
+  > Se usa **pnpm 11.x** porque el proyecto fija **Node 24** (pnpm 11 exige Node ≥ 22.13).
 - **Vercel CLI:** **no es imprescindible** con el modelo elegido (Vercel despliega vía Git).
   Solo lo necesitarás para depurar builds en local (`vercel build`). Instálalo únicamente si te
   hace falta: `pnpm add -g vercel`.
@@ -344,8 +343,8 @@ nuevos y aislados.
 
 - **`.dockerignore`** — mantiene el contexto de build liviano y **evita filtrar secretos**
   (`.env*`, `.git`, `node_modules`, `src/generated`, etc.).
-- **`Dockerfile.test`** — imagen basada en `node:20-slim` con pnpm gestionado por corepack (la
-  versión sale de `packageManager`). Instala dependencias (dispara `postinstall → prisma
+- **`Dockerfile.test`** — imagen basada en `node:24-slim` con **pnpm 11.10.0** (instalado por npm,
+  fijado a `packageManager`). Instala dependencias (dispara `postinstall → prisma
   generate`) y copia el código. **No** construye Next.js: su fin es correr pruebas.
 - **`docker-compose.test.yml`** — orquesta un **Postgres efímero** + un contenedor `app-test`
   que aplica migraciones, siembra y corre `test:integration`.
@@ -354,15 +353,15 @@ nuevos y aislados.
 
 ```dockerfile
 # syntax=docker/dockerfile:1
-FROM node:20-slim
+FROM node:24-slim
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends postgresql-client \
   && rm -rf /var/lib/apt/lists/*
 
-# pnpm FIJADO a la misma versión que `packageManager`. pnpm 10.x es compatible con Node 20
-# (pnpm 11 exige Node >=22.13). Se instala por npm (determinista) en vez de corepack.
-RUN npm install -g pnpm@10.34.5
+# pnpm FIJADO a la misma versión que `packageManager`. Node 24 permite pnpm 11.x
+# (pnpm 11 exige Node >=22.13). Se instala por npm (determinista).
+RUN npm install -g pnpm@11.10.0
 
 WORKDIR /app
 
@@ -500,7 +499,7 @@ Niveles de validación, de más barato a más caro:
 1. En Vercel: *Add New… → Project → Import Git Repository* y elige el repo de GitHub.
 2. **Framework Preset:** Vercel detectará **Next.js** automáticamente. Déjalo así.
 3. **Root Directory:** `.` (la raíz). *No es un monorepo*; no cambies esto.
-4. **Node.js Version:** **20.x** (Project Settings → General).
+4. **Node.js Version:** **24.x** (Project Settings → General). Si Vercel aún no lista 24.x, usa **22.x** (también cumple el mínimo de pnpm 11) y relaja `engines` a `>=22`.
 
 ### 8.2 Comandos de build
 
@@ -935,18 +934,16 @@ Formato: **Síntoma → Causa probable → Diagnóstico → Solución.**
 
 - **Síntoma:** build ok en local, roto en CI/Vercel (o al revés).
   **Causa:** versión de Node distinta.
-  **Diagnóstico:** compara `node -v` con `.nvmrc` (`20`).
-  **Solución:** usa Node 20 en todos lados (setup-node lee `.nvmrc`; en Vercel fija 20.x).
+  **Diagnóstico:** compara `node -v` con `.nvmrc` (`24`).
+  **Solución:** usa Node 24 en todos lados (setup-node lee `.nvmrc`; en Vercel fija 24.x).
 
 - **Síntoma:** en Docker/CI, `pnpm install` falla con `This version of pnpm requires at least
   Node.js v22.13` y/o `No such built-in module: node:sqlite`.
-  **Causa:** una versión de **pnpm 11.x** (que exige Node ≥ 22.13) corriendo sobre **Node 20**.
-  Suele pasar si tu máquina tiene Node 22/24 (donde pnpm 11 funciona) pero CI/Docker usan Node 20.
-  **Diagnóstico:** `pnpm -v` local vs. la versión que resuelven CI/Docker; revisa `packageManager`
-  en `package.json`.
-  **Solución:** este proyecto fija **pnpm 10.34.5** en `packageManager` (última rama 10.x,
-  compatible con Node 20). No lo subas a 11.x salvo que también subas Node a 22+ en `.nvmrc`,
-  `engines`, la imagen Docker y Vercel.
+  **Causa:** **pnpm 11.x** (exige Node ≥ 22.13) corriendo sobre un Node < 22.13 (p. ej. Node 20).
+  **Diagnóstico:** `node -v` en el entorno que falla; compáralo con el mínimo de pnpm 11.
+  **Solución:** este proyecto usa **Node 24** (`.nvmrc`, `engines`, `node:24-slim`, Vercel) justo
+  para poder usar **pnpm 11.10.0**. Mantén Node ≥ 22.13 en TODOS los entornos. Si tuvieras que
+  correr en Node 20, baja pnpm a la rama 10.x en `packageManager`.
 
 ### TypeScript
 
@@ -1047,7 +1044,7 @@ Formato: **Síntoma → Causa probable → Diagnóstico → Solución.**
 ## 15. Checklist final
 
 ### Preparación local
-- [ ] Node 20+ y pnpm 10.34.5 activos (`node -v`, `pnpm -v`; la versión sale de `packageManager`).
+- [ ] Node 24+ y pnpm 11.10.0 activos (`node -v`, `pnpm -v`; la versión sale de `packageManager`).
 - [ ] `pnpm install --frozen-lockfile` OK (se generó `src/generated/prisma`).
 - [ ] `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm build` en verde.
 - [ ] `.env` completo con las 5 requeridas.
@@ -1109,13 +1106,13 @@ Formato: **Síntoma → Causa probable → Diagnóstico → Solución.**
 
 **Modificados**
 - `package.json` — añadidos 3 scripts (`postinstall` → `prisma generate`, `test:unit`,
-  `test:integration`) y el campo `packageManager` (`pnpm@10.34.5`, versión única para
-  local/CI/Docker; rama 10.x por compatibilidad con Node 20).
+  `test:integration`) y el campo `packageManager` (`pnpm@11.10.0`, versión única para
+  local/CI/Docker).
 
 **Creados**
 - `docs/vercel-cicd-deployment-guide.md` — esta guía.
 - `.dockerignore` — contexto de build limpio y sin secretos.
-- `Dockerfile.test` — imagen de validación (Node 20 + pnpm por corepack/packageManager).
+- `Dockerfile.test` — imagen de validación (Node 24 + pnpm 11.10.0).
 - `docker-compose.test.yml` — Postgres efímero + runner de integración/aislamiento.
 - `.env.test` — valores dummy versionados para tests.
 - `.github/workflows/ci.yml` — gate de PR/push (jobs `quality` y `docker-validate`).

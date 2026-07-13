@@ -1,0 +1,52 @@
+name: Migrate Production DB
+
+# Aplica las migraciones pendientes a la base de datos de PRODUCCIÓN.
+# Se desacopla del build de Vercel a propósito: así las migraciones NO corren en cada
+# build ni en cada Preview, sino de forma controlada y serial sobre la DB real.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch: {} # permite reintentar/forzar manualmente desde la pestaña Actions
+
+# Serializa las migraciones: nunca dos a la vez sobre la misma DB. No cancelamos una
+# migración en curso (podría dejar el esquema a medias).
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: prisma migrate deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # GitHub Environment "production": aquí se guarda el secret DIRECT_URL y, opcionalmente,
+    # se configuran "required reviewers" para aprobar manualmente antes de tocar la DB.
+    environment: production
+    # DIRECT_URL = conexión directa como owner (crea rol app_user, RLS, aplica DDL).
+    # prisma.config.ts la lee vía env("DIRECT_URL").
+    env:
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Sin `version`: pnpm/action-setup lee la versión de `packageManager` en package.json.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Aplica solo migraciones YA existentes en prisma/migrations (no genera nuevas ni
+      # abre prompts). Idempotente: si no hay pendientes, no hace nada.
+      - name: Apply pending migrations
+        run: pnpm exec prisma migrate deploy

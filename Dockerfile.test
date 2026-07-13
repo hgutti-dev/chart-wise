@@ -1,0 +1,46 @@
+# syntax=docker/dockerfile:1
+# ─────────────────────────────────────────────────────────────────────────────
+# Imagen de VALIDACIÓN (no de producción). Su único fin es correr, de forma
+# reproducible y aislada, las pruebas que necesitan una base de datos real
+# (tests/integration + tests/isolation) contra el Postgres del compose de test.
+#
+# El despliegue de producción lo hace Vercel de forma nativa: aquí NO se produce
+# ni se sirve un build de Next.js.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Node 24 (coincide con .nvmrc y engines.node >=24). "slim" = imagen liviana.
+FROM node:24-slim
+
+# Postgres client tools (pg_isready) por si se quisiera esperar a la DB desde aquí.
+# libc/openssl ya vienen en slim; Prisma 7 + adapter-pg no requieren binarios nativos extra.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends postgresql-client \
+  && rm -rf /var/lib/apt/lists/*
+
+# pnpm FIJADO a la misma versión que `packageManager` en package.json. Node 24 permite pnpm 11.x
+# (pnpm 11 exige Node >=22.13). Se instala por npm (determinista) para no depender de la versión
+# de corepack de la imagen.
+RUN npm install -g pnpm@11.10.0
+
+WORKDIR /app
+
+# Placeholder SOLO para que el `postinstall` (prisma generate) no falle: en Prisma 7,
+# prisma.config.ts evalúa env("DIRECT_URL") al cargar y lanza si falta. `generate` no
+# se conecta a la DB, así que una URL ficticia basta. En runtime, docker-compose pisa
+# estos valores con los reales del Postgres de test.
+ENV DIRECT_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+
+# 1) Capa de dependencias (se cachea mientras no cambien manifiesto ni lockfile).
+#    --frozen-lockfile falla si el lockfile no está sincronizado (instalación reproducible).
+#    El postinstall genera el cliente Prisma en src/generated/prisma (gitignored).
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml prisma.config.ts ./
+COPY prisma ./prisma
+RUN pnpm install --frozen-lockfile
+
+# 2) Código de la app (cambia más a menudo → capa posterior para aprovechar la caché).
+COPY . .
+
+# Sin secretos horneados: el entorno real (URLs de la DB de test) llega por compose.
+# El comando concreto (migrate deploy + seed + test:integration) lo define docker-compose.test.yml.
+CMD ["pnpm", "test:integration"]

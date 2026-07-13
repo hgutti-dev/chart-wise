@@ -1,0 +1,63 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Arnés de VALIDACIÓN con Docker. Levanta un Postgres efímero y un contenedor que:
+#   1) aplica las migraciones (prisma migrate deploy → crea tablas, rol app_user y RLS),
+#   2) siembra los tenants A y B (prisma db seed),
+#   3) corre tests/integration + tests/isolation (pnpm test:integration).
+#
+# Uso:
+#   docker compose -f docker-compose.test.yml up --build --abort-on-container-exit \
+#     --exit-code-from app-test
+#   docker compose -f docker-compose.test.yml down -v   # limpieza
+#
+# La DB es efímera (tmpfs, sin volumen persistente): cada corrida parte de cero.
+# ─────────────────────────────────────────────────────────────────────────────
+services:
+  postgres:
+    image: postgres:16
+    container_name: chartwise-postgres-test
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chartwise
+    # Mapear a 5433 por defecto para no chocar con el Postgres de desarrollo (5432).
+    # app-test NO usa este puerto: habla con "postgres:5432" por la red interna del compose.
+    ports:
+      - "${DB_TEST_HOST_PORT:-5433}:5432"
+    # DB en memoria: rápida y sin residuos entre corridas.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d chartwise"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Valores de prueba (no secretos) desde el archivo versionado .env.test...
+    env_file:
+      - .env.test
+    # ...pero dentro de la red del compose el host de la DB es el servicio "postgres",
+    # no "localhost". `environment` tiene prioridad sobre `env_file` y sobrescribe las URLs.
+    environment:
+      # Owner (migraciones + seed): crea rol app_user, RLS e inserta tenants.
+      DIRECT_URL: "postgresql://postgres:postgres@postgres:5432/chartwise"
+      # Rol de la app (NOBYPASSRLS): las pruebas de aislamiento conectan con este.
+      DATABASE_URL: "postgresql://app_user:app_pw@postgres:5432/chartwise"
+    restart: "no"
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        echo "▶ Aplicando migraciones (migrate deploy)..."
+        pnpm exec prisma migrate deploy
+        echo "▶ Sembrando tenants A y B (db seed)..."
+        pnpm exec prisma db seed
+        echo "▶ Ejecutando integration + isolation..."
+        pnpm test:integration

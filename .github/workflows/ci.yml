@@ -1,0 +1,86 @@
+name: CI
+
+# Gate de integración continua. Corre en cada PR hacia master y en cada push a master.
+# Con branch protection (checks obligatorios), ningún código roto llega a master
+# y, por tanto, tampoco a Production en Vercel.
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+# Cancela ejecuciones previas del mismo ref (PR/rama) cuando llega un commit nuevo:
+# no malgasta minutos validando commits ya superados.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Privilegio mínimo: estos jobs solo necesitan leer el repositorio.
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Lint · Typecheck · Unit · Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # next.config.ts ejecuta parseEnv() al cargar, así que `next build` y el postinstall
+    # (`prisma generate`) exigen estas variables presentes en tiempo de build. NO son
+    # secretos: son placeholders válidos (URLs bien formadas / strings no vacíos) y el
+    # build no se conecta a la base de datos. Los valores reales viven en Vercel.
+    env:
+      AUTH_SECRET: ci-dummy-secret
+      AUTH_GOOGLE_ID: ci-dummy-google-id
+      AUTH_GOOGLE_SECRET: ci-dummy-google-secret
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Sin `version`: pnpm/action-setup lee la versión de `packageManager` en package.json.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # El postinstall genera el cliente Prisma en src/generated/prisma (gitignored),
+      # imprescindible para que compile/arranque la app.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit & architecture tests
+        run: pnpm test:unit
+
+      - name: Build
+        run: pnpm build
+
+  docker-validate:
+    name: Docker · Integration & Isolation (RLS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Construye la imagen de test y corre migrate deploy + seed + integration/isolation
+      # contra un Postgres efímero, todo DENTRO de Docker. --exit-code-from propaga el
+      # resultado de app-test como resultado del job (falla el job si fallan las pruebas).
+      - name: Integration & isolation tests in Docker
+        run: >
+          docker compose -f docker-compose.test.yml up
+          --build --abort-on-container-exit --exit-code-from app-test
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v
