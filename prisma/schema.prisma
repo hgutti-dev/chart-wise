@@ -24,6 +24,7 @@ model Tenant {
   previousSlugs String[]  @default([])
   deletedAt     DateTime? @db.Timestamptz(6)
   notes         Note[]
+  memberships   Membership[]
 }
 
 // Agregado tenant-scoped del módulo `example` (placeholder para probar la multitenancy).
@@ -40,6 +41,33 @@ model Note {
   // Retrofit ADR-006: índice obligatorio de tabla de negocio -> FKs tenant-safe.
   @@unique([tenantId, id])
   @@index([tenantId])
+}
+
+// Relación usuario↔tenant del módulo `tenancy` (Fase 3): AQUÍ vive el rol (ADR-002).
+// Tenant-scoped -> replica el patrón RLS de `Note`, con la salvedad de la ruta "mis
+// membresías" (policy por userId, R3). `userId` referencia al `User` de `identity` POR ID
+// (sin FK entre módulos en el dominio). RLS/GRANT/policies se editan a mano en el SQL de la
+// migración (Prisma no modela RLS).
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model Membership {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  userId    String   @db.Uuid
+  role      Role
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@unique([tenantId, id])
+  @@index([tenantId])
+  @@map("memberships")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

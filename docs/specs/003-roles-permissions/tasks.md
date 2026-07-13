@@ -23,17 +23,17 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 - [x] **T023 [P]** `tests/unit/tenancy/can.spec.ts`: **Verificar SC-004** (plano) y **SC-005** (propiedad `own`).
 
 ## Fase C — Guard + `AuthContext` *(FR-005, FR-008)*
-- [ ] **T030 [P]** `tenancy/domain/errors/permission-denied.error.ts`: `PermissionDeniedError extends DomainError` (`code = "tenancy.authorization.denied"`; no revela existencia).
-- [ ] **T031** `tenancy/application/auth-context.ts`: `AuthContext = TenantContext & { role: Role }`.
-- [ ] **T032** `tenancy/application/authorization/require-permission.ts`: `requirePermission(ctx, permission, resourceOwnerId?): Result<void, PermissionDeniedError>`.
-- [ ] **T033 [P]** `tests/unit/tenancy/require-permission.spec.ts`: **Verificar SC-006**.
+- [x] **T030 [P]** `tenancy/domain/errors/permission-denied.error.ts`: `PermissionDeniedError extends DomainError` (`code = "tenancy.authorization.denied"`; no revela existencia).
+- [x] **T031** `tenancy/application/auth-context.ts`: `AuthContext = TenantContext & { role: Role }`.
+- [x] **T032** `tenancy/application/authorization/require-permission.ts`: `requirePermission(ctx, permission, resourceOwnerId?): Result<void, PermissionDeniedError>`.
+- [x] **T033 [P]** `tests/unit/tenancy/require-permission.spec.ts`: **Verificar SC-006**.
 
 ## Fase D — Data model de `Membership` *(FR-006)*
-- [ ] **T040** `prisma/schema.prisma`: `enum Role` + `model Membership` (`@@unique([userId, tenantId])`, `@@unique([tenantId, id])`, `@@index([tenantId])`, `onDelete: Cascade`) + relación inversa en `Tenant`.
-- [ ] **T041** `prisma migrate dev --create-only`; **editar el SQL**: `GRANT SELECT, INSERT, UPDATE, DELETE ON "memberships" TO app_user`; `ENABLE`/`FORCE` RLS; policy scoped (`tenantId`) + policy por usuario (`userId`) (R3).
-- [ ] **T042** Aplicar con `migrate dev`; regenerar cliente; `typecheck`.
-- [ ] **T043 [P]** `tests/isolation/membership-tenant-isolation.spec.ts`: **Verificar SC-009** (tenant A no lee `Membership` del tenant B → cero filas).
-- [ ] **T044** **Verificar SC-007**: `migrate status` +1; `grep -R "ENABLE ROW LEVEL SECURITY\|GRANT" prisma/migrations` sobre `memberships`.
+- [x] **T040** `prisma/schema.prisma`: `enum Role` + `model Membership` (`@@unique([userId, tenantId])`, `@@unique([tenantId, id])`, `@@index([tenantId])`, `onDelete: Cascade`) + relación inversa en `Tenant`.
+- [x] **T041** `prisma migrate dev --create-only`; **editar el SQL**: `GRANT SELECT, INSERT, UPDATE, DELETE ON "memberships" TO app_user`; `ENABLE`/`FORCE` RLS; policy scoped (`tenantId`) + policy por usuario (`userId`) (R3). Policies con `NULLIF(current_setting(...),'')` (fix del bug de GUC vacío en conexión reusada).
+- [x] **T042** Aplicar con `migrate dev`; regenerar cliente; `typecheck`.
+- [x] **T043 [P]** `tests/isolation/membership-tenant-isolation.spec.ts`: **Verificar SC-009** (tenant A no lee `Membership` del tenant B → cero filas).
+- [x] **T044** **Verificar SC-007**: `migrate status` +1; `grep -R "ENABLE ROW LEVEL SECURITY\|GRANT" prisma/migrations` sobre `memberships`.
 
 ## Fase E — `MembershipRepository` *(FR-007)*
 - [ ] **T050** `tenancy/domain/ports/membership.repository.ts`: puerto `create`/`findRole(userId, tenantId)`/`listByUser(userId)`/`findActive(userId)`.
