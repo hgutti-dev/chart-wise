@@ -5,9 +5,8 @@ name: Migrate Production DB
 # build ni en cada Preview, sino de forma controlada y serial sobre la DB real.
 #
 # Trigger SOLO manual por ahora: todavía no hay DB de producción provisionada ni el
-# secret DIRECT_URL en el Environment "production", así que un trigger automático fallaría
-# en cada push. Cuando existan ambos, re-habilitar `push: branches: [master]` para migrar
-# de forma automática en cada release a master.
+# repository secret DIRECT_URL, así que un trigger automático fallaría en cada push. Cuando
+# existan ambos, re-habilitar `push: branches: [master]` para migrar en cada release a master.
 on:
   workflow_dispatch: {} # ejecutar/reintentar a mano desde la pestaña Actions
 
@@ -25,11 +24,11 @@ jobs:
     name: prisma migrate deploy
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # GitHub Environment "production": aquí se guarda el secret DIRECT_URL y, opcionalmente,
-    # se configuran "required reviewers" para aprobar manualmente antes de tocar la DB.
-    environment: production
-    # DIRECT_URL = conexión directa como owner (crea rol app_user, RLS, aplica DDL).
-    # prisma.config.ts la lee vía env("DIRECT_URL").
+    # DIRECT_URL = repository secret (Settings → Secrets and variables → Actions). En repo privado
+    # con GitHub Free NO hay environment secrets ni required reviewers (solo repo público o
+    # Pro/Team); por eso se guarda a nivel de repositorio y el trigger manual hace de aprobación.
+    # Es la conexión directa como owner (crea rol app_user, RLS, aplica DDL); prisma.config.ts la
+    # lee vía env("DIRECT_URL").
     env:
       DIRECT_URL: ${{ secrets.DIRECT_URL }}
     steps:
