@@ -3,10 +3,13 @@ name: Migrate Production DB
 # Aplica las migraciones pendientes a la base de datos de PRODUCCIÓN.
 # Se desacopla del build de Vercel a propósito: así las migraciones NO corren en cada
 # build ni en cada Preview, sino de forma controlada y serial sobre la DB real.
+#
+# Trigger SOLO manual por ahora: todavía no hay DB de producción provisionada ni el
+# secret DIRECT_URL en el Environment "production", así que un trigger automático fallaría
+# en cada push. Cuando existan ambos, re-habilitar `push: branches: [master]` para migrar
+# de forma automática en cada release a master.
 on:
-  push:
-    branches: [master]
-  workflow_dispatch: {} # permite reintentar/forzar manualmente desde la pestaña Actions
+  workflow_dispatch: {} # ejecutar/reintentar a mano desde la pestaña Actions
 
 # Serializa las migraciones: nunca dos a la vez sobre la misma DB. No cancelamos una
 # migración en curso (podría dejar el esquema a medias).
