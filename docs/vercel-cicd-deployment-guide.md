@@ -56,6 +56,14 @@ llevarla a producción con un flujo **CI/CD** reproducible. Cada pieza tiene un 
 aislamiento multitenant) → Vercel publica un Preview navegable → al aprobar y mergear, Vercel
 publica Production y un job aplica las migraciones de base de datos de forma controlada.
 
+> **Todo con plan gratuito.** Este flujo funciona **sin pagar nada**: repositorio **privado en
+> GitHub Free**, **GitHub Actions** (2 000 min/mes incluidos en repos privados Free — de sobra para
+> este proyecto), **Vercel Hobby** (gratis, uso personal/no comercial), **Neon** (free tier) y
+> **Google OAuth** (gratis). La **única** contrapartida del plan gratuito: en un repo privado,
+> GitHub **no puede volver obligatoria** la protección de `master` (branch protection, rulesets y
+> Environments requieren repo **público** o un plan de pago). Por eso el gate de `master` es
+> **informativo, no bloqueante** (ver §5) y `DIRECT_URL` va como **repository secret** (ver §9.2).
+
 ---
 
 ## 2. Arquitectura y diagnóstico actual
@@ -177,9 +185,10 @@ completo en §10. Resumen: **5 requeridas** (`AUTH_SECRET`, `AUTH_GOOGLE_ID`,
 
 ## 3. Prerrequisitos
 
-- **Cuenta de GitHub** con permiso de administrador en el repositorio (para configurar branch
-  protection, Environments y Secrets).
-- **Cuenta de Vercel** (el plan Hobby sirve para empezar) con permiso para importar el repo.
+- **Cuenta de GitHub** (el plan **Free** basta) con permiso de administrador en el repositorio
+  (para configurar **Secrets** de Actions). En repo **privado + Free**, branch protection y
+  Environments **no se aplican**: usamos un gate **informativo** (§5) y **repository secrets** (§9.2).
+- **Cuenta de Vercel** (plan **Hobby**, gratis para uso personal/no comercial) con permiso para importar el repo.
 - **Repositorio remoto** en GitHub con la rama `master`.
 - **Docker** instalado y corriendo (Docker Desktop en Windows/Mac). Necesario para las pruebas
   con DB en local y para reproducir el job `docker-validate`.
@@ -196,13 +205,13 @@ completo en §10. Resumen: **5 requeridas** (`AUTH_SECRET`, `AUTH_GOOGLE_ID`,
 - **Vercel CLI:** **no es imprescindible** con el modelo elegido (Vercel despliega vía Git).
   Solo lo necesitarás para depurar builds en local (`vercel build`). Instálalo únicamente si te
   hace falta: `pnpm add -g vercel`.
-- **Acceso a los servicios externos:**
-  - **PostgreSQL de producción** (recomendado: **Neon**) con dos cadenas de conexión (pooled y
-    direct) y capacidad de crear/ajustar el rol `app_user`.
-  - **Google Cloud OAuth Client** (Web application) con el redirect URI de tu dominio.
+- **Acceso a los servicios externos (todos con capa gratuita):**
+  - **PostgreSQL de producción** (recomendado: **Neon**, cuyo **free tier** basta para empezar) con
+    dos cadenas de conexión (pooled y direct) y capacidad de crear/ajustar el rol `app_user`.
+  - **Google Cloud OAuth Client** (Web application, gratis) con el redirect URI de tu dominio.
 - **Permisos:**
-  - GitHub: *Settings → Branches* (protección), *Settings → Environments* y *Secrets and
-    variables → Actions*.
+  - GitHub: *Settings → Secrets and variables → Actions* (repository secrets). *(En Free privado,
+    Branch protection y Environments no están disponibles; ver §5 y §9.2.)*
   - Vercel: acceso a *Project → Settings → Environment Variables* y *Git*.
 
 ---
@@ -307,29 +316,54 @@ Get-Content .env.example | Select-String '^\w'
 
 Mantenemos algo **simple y mantenible**, acorde al tamaño del proyecto (un solo servicio):
 
-- **`master`** = rama de **producción**. Protegida. Cada merge dispara Production en Vercel.
+- **`master`** = rama de **producción**. Cada merge dispara Production en Vercel. En plan Free su
+  protección es **por convención** (gate informativo, ver abajo), no impuesta por GitHub.
 - **Ramas de funcionalidad** (`feat/...`, `fix/...`, `docs/...`) desde `master`.
 - **Pull Request** hacia `master` por cada cambio. Vercel publica un **Preview** por PR.
 - **Sin rama de integración** (`develop`): añadiría complejidad sin beneficio aquí. Se documenta
   como alternativa si el equipo crece.
-- **Revisión de código:** al menos 1 aprobación antes de mergear.
+- **Revisión de código:** idealmente ≥1 aprobación antes de mergear (en Free no es obligatoria).
 
-### Protección de `master` (checks obligatorios)
+### Protección de `master` en plan Free (gate **informativo**)
 
-En *GitHub → Settings → Branches → Add rule* para `master`:
+> **Realidad del plan gratuito.** En un repositorio **privado con GitHub Free**, GitHub **te deja
+> crear** branch protection / rulesets **pero no los aplica** (la propia pantalla lo avisa: *"won't
+> be enforced on this private repository…"*). Volver el gate **obligatorio y bloqueante** exige repo
+> **público** (gratis) o un plan de pago (**Pro** para cuenta personal, **Team** para organización).
+> Como elegimos **seguir privados y gratis**, el gate de `master` es **informativo**: el CI corre y
+> se ve, pero **no impide** el merge. La barrera es la **disciplina del equipo**.
 
+**Cómo funciona el gate informativo (no hay que configurar nada):**
+
+1. Abres un **Pull Request** hacia `master`.
+2. `ci.yml` corre automáticamente y publica dos checks en el PR (pestaña *Checks* y bloque de
+   estado al final del PR):
+   - **`Lint · Typecheck · Unit · Build`** (job `quality`)
+   - **`Docker · Integration & Isolation (RLS)`** (job `docker-validate`)
+3. **Regla de oro (manual):** *no se mergea un PR con algún check en rojo.* Espera a los dos ✅.
+
+> **Por qué la disciplina importa aún más aquí:** Vercel despliega Production desde lo que haya en
+> `master`. Sin gate obligatorio, **nada técnico impide** que un merge en rojo llegue a Production;
+> la única salvaguarda es que el equipo respete la regla de oro. (Los Preview de PR sí se despliegan
+> aunque el CI esté rojo — son desechables y útiles para revisar visualmente.)
+
+<details>
+<summary><strong>¿Quieres que sea obligatorio y bloqueante algún día? (opcional)</strong></summary>
+
+Cualquiera de estas vías **activa** la protección real; elige según tu caso:
+
+- **Repo público** (gratis): *Settings → General → Change visibility → Public*. Branch protection y
+  Actions pasan a aplicarse sin coste.
+- **GitHub Pro** (~4 USD/mes, cuenta personal) o **organización con Team**: habilitan branch
+  protection en repos **privados**.
+
+Con cualquiera de ellas, en *Settings → Branches → Add branch protection rule* (`master`):
 - ✅ **Require a pull request before merging** (1 approval).
-- ✅ **Require status checks to pass before merging** → marca los checks:
-  - `Lint · Typecheck · Unit · Build` (job `quality`)
-  - `Docker · Integration & Isolation (RLS)` (job `docker-validate`)
+- ✅ **Require status checks to pass before merging** → añade `Lint · Typecheck · Unit · Build` y
+  `Docker · Integration & Isolation (RLS)` *(aparecen tras su primera ejecución en un PR)*.
 - ✅ **Require branches to be up to date before merging**.
-- ✅ (Recomendado) **Do not allow bypassing the above settings**.
-
-> **Por qué importa con Vercel Git nativo:** Vercel despliega Production a partir de lo que hay en
-> `master`. Al exigir que el CI esté verde para poder mergear, garantizas que **a `master` solo
-> entra código validado**, y por tanto Production nunca recibe algo que no pasó el gate. Los
-> Preview de ramas de PR sí pueden desplegarse aunque el CI esté rojo (son desechables): eso es
-> normal y útil para revisar visualmente.
+- ✅ **Do not allow bypassing the above settings**.
+</details>
 
 ---
 
@@ -659,9 +693,10 @@ jobs:
 ```yaml
 name: Migrate Production DB
 
+# Trigger SOLO manual: lo ejecutas a mano desde la pestaña Actions. En Free, esto sustituye al
+# "required reviewer" (no disponible en repos privados Free): tú eres la aprobación humana antes
+# de tocar la DB. Cuando haya DB de producción puedes re-habilitar `push: branches: [master]`.
 on:
-  push:
-    branches: [master]
   workflow_dispatch: {}
 
 concurrency:
@@ -676,7 +711,7 @@ jobs:
     name: prisma migrate deploy
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    environment: production      # aquí vive el secret DIRECT_URL (+ reviewers opcionales)
+    # DIRECT_URL = repository secret. En Free privado NO uses environment secrets (no existen).
     env:
       DIRECT_URL: ${{ secrets.DIRECT_URL }}
     steps:
@@ -690,9 +725,12 @@ jobs:
       - run: pnpm exec prisma migrate deploy
 ```
 
-- **Environment `production`:** en *Settings → Environments* crea `production`, añade el secret
-  `DIRECT_URL` (cadena directa/owner de Neon) y, si quieres, **required reviewers** para aprobar
-  manualmente antes de tocar la DB.
+- **`DIRECT_URL` como *repository secret* (plan Free):** en *Settings → Secrets and variables →
+  Actions → New repository secret* añade `DIRECT_URL` (cadena directa/owner de Neon). Los
+  **Environments** de GitHub y sus *environment secrets* / *required reviewers* **no están
+  disponibles en repos privados Free** (requieren repo público, Pro o Team); por eso **no** usamos
+  `environment: production`. El *trigger manual* (`workflow_dispatch`) es tu aprobación humana
+  gratuita antes de migrar.
 - **`concurrency` serial:** evita dos migraciones simultáneas.
 
 > ⚠️ **Limitación honesta (orden migrate ↔ deploy):** al mergear, este job y el deploy de Vercel
@@ -748,7 +786,7 @@ reales; usa placeholders.
 | `AUTH_GOOGLE_ID` | Client ID del OAuth de Google. | Prod, Preview, (Local) | Secreto (no `NEXT_PUBLIC_`) | Vercel, `.env` local | **Build** (fail-fast) + Runtime |
 | `AUTH_GOOGLE_SECRET` | Client Secret del OAuth de Google. | Prod, Preview, (Local) | **Secreto** | Vercel, `.env` local | **Build** (fail-fast) + Runtime |
 | `DATABASE_URL` | Conexión de la app (rol `app_user`, NOBYPASSRLS; en Neon, *pooled*). | Prod, Preview, Test | **Secreto** | Vercel, GitHub (test), `.env`/`.env.test` | Runtime + **Test** |
-| `DIRECT_URL` | Conexión directa/owner para migraciones y `prisma generate`. | Prod (Actions), Test, Build | **Secreto** | GitHub Secret (`production`), Vercel, `.env`/`.env.test` | **Build** (generate) + Migraciones + **Test** |
+| `DIRECT_URL` | Conexión directa/owner para migraciones y `prisma generate`. | Prod (Actions), Test, Build | **Secreto** | GitHub **repository secret**, Vercel, `.env`/`.env.test` | **Build** (generate) + Migraciones + **Test** |
 | `APP_URL` | Base pública para enlaces de verificación de email. Default `http://localhost:3000`. | Prod, Preview | Público (no `NEXT_PUBLIC_`) | Vercel | Runtime |
 | `NODE_ENV` | `development` / `test` / `production`. | Todos | Público | Automático (Next/Vitest) | Build + Runtime + Test |
 | `DB_HOST_PORT` | *(Opcional, solo local)* Puerto host del Postgres de Docker (default 5432). | Local | Público | `.env` | Solo local/Docker |
@@ -764,7 +802,7 @@ reales; usa placeholders.
 | `.env` | Secretos reales de tu máquina | ❌ No (gitignored) |
 | `.env.test` | Valores **dummy** + DB de test | ✅ Sí (sin secretos) |
 | `.env.example` | Plantilla de nombres, sin valores | ✅ Sí |
-| **GitHub → Secrets (Environment `production`)** | `DIRECT_URL` para migraciones | ❌ (cifrado) |
+| **GitHub → Secrets and variables → Actions (repository secret)** | `DIRECT_URL` para migraciones | ❌ (cifrado) |
 | **GitHub → Variables** | *(No hacen falta hoy; los dummy del CI van inline en `ci.yml`.)* | — |
 | **Vercel → Environment Variables** | Las 5 requeridas + `APP_URL`, por entorno | ❌ (cifrado) |
 
@@ -799,9 +837,10 @@ Flujo completo, del branch a producción:
 6. **Docker** construye y corre integración/aislamiento dentro del job `docker-validate`.
 7. **Vercel** publica un **Preview Deployment** para el PR.
 8. **Revisar y aprobar** (revisión de código + revisar el Preview).
-9. **Merge** a `master` (solo posible con los checks en verde, por branch protection).
-10. **Pipeline de producción:** `migrate-production.yml` aplica migraciones; Vercel construye
-    Production en paralelo.
+9. **Merge** a `master` **cuando los dos checks estén en verde**. *(En Free privado el merge no se
+   bloquea solo: es una regla de disciplina del equipo, no impuesta por GitHub; ver §5.)*
+10. **Pipeline de producción:** ejecutas `migrate-production.yml` **a mano** (*Actions → Run
+    workflow*) para aplicar migraciones; Vercel construye Production en paralelo al merge.
 11. **Vercel despliega** Production.
 12. **Verificaciones post-deploy:** `smoke.yml` (automático) + smoke manual (§12).
 
@@ -1056,12 +1095,13 @@ Formato: **Síntoma → Causa probable → Diagnóstico → Solución.**
 
 ### GitHub
 - [ ] Repo con rama `master`.
-- [ ] Branch protection en `master` con PR obligatorio.
-- [ ] Checks obligatorios: `quality` y `docker-validate`.
+- [ ] Flujo por PR acordado; `ci.yml` corre en cada PR y publica los dos checks.
+- [ ] Regla de equipo (gate informativo): **no** mergear con `Lint · Typecheck · Unit · Build` o
+  `Docker · Integration & Isolation (RLS)` en rojo. *(En Free privado no es bloqueante; ver §5.)*
 
 ### GitHub Actions
 - [ ] `ci.yml`, `migrate-production.yml`, `smoke.yml` presentes en `.github/workflows/`.
-- [ ] Environment `production` creado con el secret `DIRECT_URL` (y reviewers si aplica).
+- [ ] `DIRECT_URL` guardado como **repository secret** *(Environments no disponibles en Free privado; ver §9.2)*.
 - [ ] Un PR de prueba muestra los dos checks corriendo.
 
 ### Vercel
@@ -1071,7 +1111,7 @@ Formato: **Síntoma → Causa probable → Diagnóstico → Solución.**
 
 ### Variables de entorno
 - [ ] 5 requeridas + `APP_URL` en Vercel, para **Production** y **Preview**.
-- [ ] `DIRECT_URL` como Secret en el Environment `production` de GitHub.
+- [ ] `DIRECT_URL` como **repository secret** en *Settings → Secrets and variables → Actions*.
 - [ ] Ningún secreto real commiteado (`.env` ignorado; `.env.test` solo dummy).
 
 ### Base de datos
@@ -1175,8 +1215,8 @@ docker compose -f docker-compose.test.yml down -v
 2. En la pestaña *Checks* del PR verás correr **`Lint · Typecheck · Unit · Build`** y **`Docker ·
    Integration & Isolation (RLS)`**.
 3. En el PR aparecerá el comentario/estado de **Vercel** con la URL del **Preview**. Ábrela.
-4. Configura branch protection (§5) para exigir ambos checks. Verifica que **no** puedes mergear
-   con un check rojo.
+4. Confirma que en el PR ves los **dos checks** (§5). En **Free privado** GitHub **no** bloquea el
+   merge; la regla del equipo es no mergear con un check en rojo.
 5. Merge a `master`: observa en *Actions* el job **`Migrate Production DB`** y en *Vercel* el
    **Production Deployment**.
 6. Tras el deploy, revisa el workflow **`Smoke (post-deploy)`** (si Vercel emite
@@ -1184,6 +1224,10 @@ docker compose -f docker-compose.test.yml down -v
 
 ## Limitaciones y riesgos pendientes
 
+- **Gate no obligatorio (plan Free + repo privado):** GitHub **no aplica** branch protection ni
+  Environments en este plan; el CI corre y es **visible**, pero **no bloquea** el merge. La única
+  barrera es la **disciplina del equipo**. Para hacerlo bloqueante sin coste, pasa el repo a
+  **público**; o usa **Pro/Team** (de pago). Ver §5.
 - **Provisión del rol `app_user` en Neon** no está automatizada: hay que crearlo/ajustarlo con
   una password segura y sus `GRANT`s antes del primer runtime real.
 - **Orden migrate ↔ deploy** en el modelo nativo es paralelo → depende de disciplina
