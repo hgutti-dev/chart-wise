@@ -36,10 +36,10 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 - [x] **T044** **Verificar SC-007**: `migrate status` +1; `grep -R "ENABLE ROW LEVEL SECURITY\|GRANT" prisma/migrations` sobre `memberships`.
 
 ## Fase E — `MembershipRepository` *(FR-007)*
-- [ ] **T050** `tenancy/domain/ports/membership.repository.ts`: puerto `create`/`findRole(userId, tenantId)`/`listByUser(userId)`/`findActive(userId)`.
-- [ ] **T051** `tenancy/infrastructure/persistence/prisma-membership.repository.ts` + `mappers/membership.mapper.ts` (patrón `set_config('app.current_tenant', …)` / `app.current_user`).
-- [ ] **T052 [P]** `tenancy/infrastructure/persistence/fake-membership.repository.ts` (o en `tests/unit/tenancy/fakes/`): *fake* en memoria.
-- [ ] **T053 [P]** `tests/integration/tenancy/prisma-membership.repository.spec.ts`: **Verificar SC-008** como `app_user`.
+- [x] **T050** `tenancy/domain/ports/membership.repository.ts`: puerto `create`/`findRole(userId, tenantId)`/`listByUser(userId)`/`findActive(userId)`. (+ entidad `domain/entities/membership.ts`, prerequisito del puerto.)
+- [x] **T051** `tenancy/infrastructure/persistence/prisma-membership.repository.ts` + `mappers/membership.mapper.ts` (patrón `set_config('app.current_tenant', …)` / `app.current_user`).
+- [x] **T052 [P]** *fake* en memoria: `tenancy/infrastructure/persistence/in-memory-membership.repository.ts` (nombre alineado con `in-memory-note.repository.ts`) + unit test `tests/unit/tenancy/in-memory-membership.repository.spec.ts`.
+- [x] **T053 [P]** `tests/integration/tenancy/prisma-membership.repository.spec.ts`: **Verificar SC-008** como `app_user`.
 
 ## Fase F — Poblado del claim (compuesto en `app/`) *(FR-009)*
 - [ ] **T060** `tenancy/infrastructure/auth/populate-tenant-claims.ts`: extensor que recibe `MembershipRepository` y puebla `activeTenantId`/`role` desde la membresía activa.
