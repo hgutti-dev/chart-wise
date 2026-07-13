@@ -10,7 +10,7 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 
 ## Fase 0 — Preparación
 
-- [x] **T001** Fijar runtime: añadir `engines.node >= 20` en `package.json` y crear `.nvmrc`. *(Q3)*
+- [x] **T001** Fijar runtime: añadir `engines.node >= 24` en `package.json` y crear `.nvmrc`. *(Q3)*
 - [x] **T002** Añadir scripts al `package.json`: `typecheck`, `lint`, `test`, `test:watch`, `db:up`, `db:down`, `db:migrate`, `db:seed`, `setup`. **Sin** ningún script con `prisma db push`. *(NFR-006, FR-004, SC-008)*
 
 ## Fase A — TypeScript estricto real *(FR-001 → SC-001)*

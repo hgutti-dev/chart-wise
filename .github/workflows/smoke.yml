@@ -1,0 +1,30 @@
+name: Smoke (post-deploy)
+
+# OPCIONAL / best-effort. Verificación de humo tras un despliegue de Vercel.
+# Vercel emite el evento GitHub `deployment_status`; cuando el estado es "success"
+# hacemos unas peticiones básicas a rutas públicas para confirmar que el sitio responde.
+on:
+  deployment_status
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Curl rutas públicas
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Solo cuando el deployment terminó OK. Para limitarlo a Production, añade:
+    #   && github.event.deployment_status.environment == 'Production'
+    if: ${{ github.event.deployment_status.state == 'success' }}
+    steps:
+      - name: Smoke test main routes
+        env:
+          TARGET_URL: ${{ github.event.deployment_status.target_url }}
+        run: |
+          set -e
+          echo "Deployment URL: $TARGET_URL"
+          # -f falla si el HTTP status es >= 400; -L sigue redirects hasta el 200 final.
+          curl -fsSL -o /dev/null -w "%{http_code}  /\n"                     "$TARGET_URL/"
+          curl -fsSL -o /dev/null -w "%{http_code}  /login\n"               "$TARGET_URL/login"
+          curl -fsSL -o /dev/null -w "%{http_code}  /api/auth/providers\n"  "$TARGET_URL/api/auth/providers"

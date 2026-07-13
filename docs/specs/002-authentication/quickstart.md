@@ -9,7 +9,7 @@
 
 ## 0. Requisitos previos
 - Fase 1 completa (Postgres arriba, `migrate` aplicado, `.env` con `AUTH_SECRET`/`DATABASE_URL`/`DIRECT_URL`).
-- Node ≥ 20 · `pnpm` · Docker Desktop.
+- Node ≥ 24 · `pnpm` · Docker Desktop.
 - (Para el flujo real de Google) un **OAuth client** en Google Cloud Console.
 
 ## 1. Instalar dependencias

@@ -72,7 +72,7 @@
 ## Decisiones cerradas del spec
 - **Q1** → R3 (Zod a mano).
 - **Q2** → R2 (`eslint-plugin-boundaries` + test de arquitectura).
-- **Q3** → Node ≥ 20 LTS, fijado en `engines` + `.nvmrc` (ver [tasks.md](tasks.md) T001).
+- **Q3** → Node ≥ 24 LTS, fijado en `engines` + `.nvmrc` (ver [tasks.md](tasks.md) T001).
 
 ## Recordatorio de implementación
 Antes de escribir código contra Prisma, Zod, ESLint/boundaries, Vitest o Auth.js, **consultar Context7** para la API vigente de cada versión (guía global). Los snippets de estos artefactos son ilustrativos.

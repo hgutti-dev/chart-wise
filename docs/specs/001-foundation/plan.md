@@ -19,7 +19,7 @@ Montar los rieles en **7 slices** que se cierran de forma incremental, cada uno 
 | Área | Elección | Versión objetivo | Racional (detalle en [research.md](research.md)) |
 |---|---|---|---|
 | Framework | Next.js (App Router) | 16.2.x (ya instalado) | Base del proyecto. |
-| Runtime | Node | ≥ 20 LTS (fijar en `engines` + `.nvmrc`) | Requerido por Next 16 / Prisma 7. |
+| Runtime | Node | ≥ 24 LTS (fijar en `engines` + `.nvmrc`) | Requerido por Next 16 / Prisma 7. |
 | Gestor de paquetes | pnpm | ya en uso | `pnpm-lock.yaml` presente. |
 | Lenguaje | TypeScript | 5.x (ya instalado) | Flags estrictos (FR-001). |
 | Linter | ESLint (flat config) + `eslint-plugin-boundaries` | ESLint 9 (ya instalado) | Fronteras por configuración (FR-002). |
