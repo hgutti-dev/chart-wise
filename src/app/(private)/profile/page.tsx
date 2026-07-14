@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { CircleCheck, LogOut, TrendingUp } from "lucide-react";
 
-import { auth, identity } from "@/modules/identity";
+import { auth } from "@/app/auth";
+import { identity } from "@/modules/identity";
 
 import { logoutAction } from "../../(public)/actions/logout.action";
 

@@ -12,11 +12,8 @@ import { RequestEmailVerification } from "./application/use-cases/request-email-
 import { VerifyEmail } from "./application/use-cases/verify-email";
 import type { UserRepository } from "./domain/ports/user.repository";
 import type { VerificationTokenRepository } from "./domain/ports/verification-token.repository";
+import type { SessionClaimsExtension } from "./infrastructure/auth/auth.config";
 import { createAuth } from "./infrastructure/auth/create-auth";
-import {
-  credentialsSignIn,
-  type CredentialsSignInInput,
-} from "./infrastructure/auth/credentials-sign-in";
 import { BcryptHasher } from "./infrastructure/crypto/bcrypt-hasher";
 import { FakeEmailSender } from "./infrastructure/email/fake-email-sender";
 import { PrismaUserRepository } from "./infrastructure/persistence/prisma-user.repository";
@@ -39,23 +36,21 @@ const getPrisma = (): PrismaClient => {
 const prisma = getPrisma();
 const hasher = new BcryptHasher();
 const emailSender = new FakeEmailSender(env.APP_URL);
-const events: EventBus = new InMemoryEventBus();
+// EventBus in-memory del proceso: el publisher (RegisterUser) y los subscribers se componen
+// sobre ESTA instancia. Se expone para que app/ (instrumentation) suscriba el handler de
+// provisión de `tenancy` a `UserRegistered` (FR-010), sin que `identity` conozca `tenancy`.
+export const eventBus: EventBus = new InMemoryEventBus();
 const users: UserRepository = new PrismaUserRepository(prisma);
 const tokens: VerificationTokenRepository = new PrismaVerificationTokenRepository(prisma);
 
 const authenticate = new AuthenticateCredentials(users, hasher);
 
-// Instancia de Auth.js (handlers/auth/signIn/signOut) — superficie server-callable del módulo.
-export const { handlers, auth, signIn, signOut } = createAuth({ prisma, authenticate });
-
-// Login por credenciales para los Server Actions: la traducción del `AuthError` de Auth.js
-// queda confinada; app/ recibe un `Result`-like plano. El cast acota el `signIn` de NextAuth
-// al contrato mínimo que consume el wrapper.
-export const signInWithCredentials = (input: CredentialsSignInInput) =>
-  credentialsSignIn(
-    signIn as unknown as Parameters<typeof credentialsSignIn>[0],
-    input,
-  );
+// Factory de Auth.js: la instancia real (handlers/auth/signIn/signOut) se compone en el
+// composition root de app/, que inyecta el extensor de claims de `tenancy` (FR-009). identity
+// queda AuthN-only, sin conocer `tenancy`; el confinamiento a `@auth/*`/`next-auth` sigue en
+// `infrastructure/auth/`.
+export const createIdentityAuth = (claims?: SessionClaimsExtension) =>
+  createAuth({ prisma, authenticate, claims });
 
 // Casos de uso ya cableados, expuestos para los Server Actions de `app/` (Fase F).
 export interface IdentityModule {
@@ -66,7 +61,7 @@ export interface IdentityModule {
 }
 
 export const identity: IdentityModule = {
-  registerUser: new RegisterUser(users, hasher, events),
+  registerUser: new RegisterUser(users, hasher, eventBus),
   requestEmailVerification: new RequestEmailVerification(users, tokens, emailSender),
   verifyEmail: new VerifyEmail(users, tokens),
   getCurrentUser: new GetCurrentUser(users),

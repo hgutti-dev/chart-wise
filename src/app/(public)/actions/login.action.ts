@@ -1,10 +1,10 @@
 "use server";
 
+import { signInWithCredentials } from "@/app/auth";
 import {
   type AuthFormState,
   loginSchema,
   resolveInternalRedirect,
-  signInWithCredentials,
 } from "@/modules/identity";
 
 // Server Action (CSRF integrado): compone el `signIn` de Auth.js vía la API pública, que en

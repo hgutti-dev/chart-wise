@@ -179,7 +179,7 @@ completo en §10. Resumen: **5 requeridas** (`AUTH_SECRET`, `AUTH_GOOGLE_ID`,
 | `.dockerignore` | ❌ No | **Creado** |
 | `.env.test` | ❌ No | **Creado** (valores dummy, versionado) |
 | `.github/workflows/*` | ❌ No | **Creados** `ci.yml`, `migrate-production.yml`, `smoke.yml` |
-| `vercel.json` | ❌ No | *No hace falta* (config por dashboard) |
+| `vercel.json` | ✅ Sí | **Creado**: fija `buildCommand` para que `prisma generate` corra en cada build (§8.2) |
 | `postinstall` / scripts de test separados | ❌ No | **Añadidos** a `package.json` |
 
 ---
@@ -543,19 +543,24 @@ Niveles de validación, de más barato a más caro:
 
 ### 8.2 Comandos de build
 
-Con este proyecto, los **valores por defecto de Vercel funcionan**, pero conviene fijarlos
-explícitamente (*Project Settings → Build & Development Settings*):
+El **Build Command se fija en `vercel.json`** (`"buildCommand": "pnpm build"`); el resto usa los
+valores por defecto de Vercel (*Project Settings → Build & Development Settings*):
 
 | Ajuste | Valor | Por qué |
 |---|---|---|
 | **Install Command** | `pnpm install --frozen-lockfile` | Instalación reproducible; dispara `postinstall` (`prisma generate`). |
-| **Build Command** | `pnpm build` *(o dejar el default `next build`)* | Build estándar de Next. |
+| **Build Command** | `pnpm build` (fijado en `vercel.json`) | Encadena `prisma generate && next build`. **No lo fijes a `next build` en el dashboard**: ese ajuste anularía el script y el cliente Prisma no se generaría. |
 | **Output Directory** | *(vacío / default)* | Next.js gestiona su salida; no la fuerces. |
 
-> **`prisma generate` en Vercel:** al correr `postinstall`, el cliente se genera durante el
-> install. Si alguna vez Vercel cachea dependencias y **omite** el postinstall (síntoma: error
-> `@prisma/client did not initialize` en runtime), el *fallback* es poner el Build Command como
-> `prisma generate && next build`.
+> **`prisma generate` en Vercel (importante):** el cliente Prisma (`src/generated/prisma`) está
+> **gitignoreado**, así que **debe regenerarse en cada build**. El `postinstall` lo genera durante
+> el install, pero Vercel **cachea dependencias**: en un *cache hit* el install es un no-op y el
+> `postinstall` **no corre** → el build falla con `Module not found: Can't resolve
+> '@/generated/prisma/client'`. Por eso el repo incluye un **`vercel.json`** con `"buildCommand":
+> "pnpm build"` (y `package.json → build` es `prisma generate && next build`). Según la doc de
+> Vercel, el `buildCommand` de `vercel.json` tiene **precedencia** sobre el Build Command del
+> dashboard **y** sobre el script de `package.json`, garantizando que `prisma generate` corra
+> siempre, sin depender de la caché ni de cómo esté configurado el dashboard.
 
 ### 8.3 Variables de entorno (Development / Preview / Production)
 
@@ -1035,9 +1040,14 @@ Formato: **Síntoma → Causa probable → Diagnóstico → Solución.**
 
 ### Vercel build
 
-- **Síntoma:** `@prisma/client did not initialize yet. Please run "prisma generate"`.
-  **Causa:** el `postinstall` no corrió (posible caché de deps que lo omitió).
-  **Solución:** *fallback* → Build Command = `prisma generate && next build`.
+- **Síntoma:** `Module not found: Can't resolve '@/generated/prisma/client'` (Turbopack) o, en
+  runtime, `@prisma/client did not initialize yet. Please run "prisma generate"`.
+  **Causa:** el cliente Prisma **gitignoreado** no se generó en el build. El `postinstall` no
+  corrió (caché de deps que lo omitió) y, si el Build Command del dashboard está fijado a
+  `next build`, ese ajuste **anula** el script `prisma generate && next build` de `package.json`.
+  **Solución:** el repo trae un **`vercel.json`** con `"buildCommand": "pnpm build"`, que tiene
+  precedencia sobre el dashboard y garantiza que `prisma generate` corra antes de `next build`. Si
+  el fallo persiste, haz *Redeploy* con **"Clear build cache"** para descartar una caché vieja.
 
 ### Prisma / conexión a la DB
 
@@ -1158,6 +1168,7 @@ Formato: **Síntoma → Causa probable → Diagnóstico → Solución.**
 
 **Creados**
 - `docs/vercel-cicd-deployment-guide.md` — esta guía.
+- `vercel.json` — fija `"buildCommand": "pnpm build"` para garantizar `prisma generate` en cada build.
 - `.dockerignore` — contexto de build limpio y sin secretos.
 - `Dockerfile.test` — imagen de validación (Node 24 + pnpm 11.10.0).
 - `docker-compose.test.yml` — Postgres efímero + runner de integración/aislamiento.

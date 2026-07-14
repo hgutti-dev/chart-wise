@@ -1,6 +1,7 @@
 "use server";
 
-import { resolveInternalRedirect, signIn } from "@/modules/identity";
+import { signIn } from "@/app/auth";
+import { resolveInternalRedirect } from "@/modules/identity";
 
 // Server Action (CSRF integrado) para el login OAuth con Google: compone el `signIn` de Auth.js
 // vía la API pública del módulo. El provider Google ya está configurado en identity/auth. En
