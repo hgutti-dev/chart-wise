@@ -48,10 +48,10 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 - [x] **T063 [P]** **SC-010** verificado (typecheck + `tests/unit/tenancy/session-claims-contract.spec.ts`) + wiring test en `auth-config.spec.ts`; `identity ↛ @/modules/tenancy` confirmado (trampa SC-013 lista para Fase H). Build de producción limpio.
 
 ## Fase G — Provisión de workspace *(FR-010)*
-- [ ] **T070** `tenancy/application/provision-workspace-on-user-registered.ts`: consume `UserRegistered`; crea `Tenant`+`Membership(OWNER)` en transacción atómica; idempotente por `userId`.
-- [ ] **T071** `TenantRepository` (puerto + adapter + fake) si no hay uno reutilizable de Fase 1; `slug` por defecto derivado + sufijo único (evitar reservados ADR-006).
-- [ ] **T072** Registrar el handler en `tenancy/di.ts` y suscribirlo al `EventBus` en el composition root.
-- [ ] **T073 [P]** `tests/unit/tenancy/provision-workspace.spec.ts`: **Verificar SC-011** (crea ambos; fallo del `Membership` → nada persistido).
+- [x] **T070** `tenancy/application/provision-workspace-on-user-registered.ts`: consume `UserRegistered` (payload estructural, sin importar el evento de identity); crea `Tenant`+`Membership(OWNER)` atómico; idempotente por `userId` (vía `findActive`). + entidad `domain/entities/tenant.ts`.
+- [x] **T071** En vez de `TenantRepository` a secas → puerto `WorkspaceProvisioner` (**provisión atómica** Tenant+Membership) + adapter Prisma (1 `$transaction`) + fake. La atomicidad cross-entidad no es posible con repos por-método. `slug` derivado del email + sufijo aleatorio (evita reservados ADR-006). **Migración extra**: `GRANT INSERT ON "Tenant" TO app_user` (init solo dio SELECT). Integración real verificada como `app_user`.
+- [x] **T072** Handler registrado en `tenancy/di.ts`; `identity` expone su `eventBus` + `UserRegistered`; `src/instrumentation.ts` (Node-only) suscribe el handler al evento en el composition root. `identity ↛ tenancy`.
+- [x] **T073 [P]** `tests/unit/tenancy/provision-workspace.spec.ts`: **SC-011** verificado (crea ambos; provisión falla → nada persistido; idempotente).
 
 ## Fase H — Arquitectura + cierre *(FR-011, FR-012)*
 - [ ] **T080** `tests/architecture/*`: aserciones nuevas — `tenancy/domain` no importa infra (**SC-001**); matriz no importable desde `src/config/**` y no-deep-import de `authorization/` (**SC-012**); `identity ↛ @/modules/tenancy` (**SC-013**). Añadir overrides de ESLint si hacen falta (matriz fuera de `config/`).

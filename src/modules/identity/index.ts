@@ -2,8 +2,13 @@
 // prohíbe deep-imports). AuthN only (ADR-007): expone identidad y sesión, nunca autorización.
 
 // Factory de Auth.js: la instancia (handlers/auth/signIn/signOut) se compone en el composition
-// root de app/, que inyecta el extensor de claims de `tenancy`. + casos de uso ya cableados.
-export { createIdentityAuth, identity, type IdentityModule } from "./di";
+// root de app/, que inyecta el extensor de claims de `tenancy`. + casos de uso ya cableados +
+// el `eventBus` del proceso (app/ suscribe ahí el handler de provisión de `tenancy`, FR-010).
+export { createIdentityAuth, eventBus, identity, type IdentityModule } from "./di";
+
+// Evento de dominio publicado al registrarse: contrato para que otros contextos (tenancy)
+// reaccionen. Se suscribe por `eventName` en app/, sin que `identity` conozca al consumidor.
+export { UserRegistered } from "./domain/events/user-registered.event";
 
 // Costura de poblado de claims (dónde se enganchan jwt/session): app/ inyecta aquí el extensor
 // de `tenancy`. identity define la costura, no el contenido (FR-009).

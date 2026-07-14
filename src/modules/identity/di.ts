@@ -36,7 +36,10 @@ const getPrisma = (): PrismaClient => {
 const prisma = getPrisma();
 const hasher = new BcryptHasher();
 const emailSender = new FakeEmailSender(env.APP_URL);
-const events: EventBus = new InMemoryEventBus();
+// EventBus in-memory del proceso: el publisher (RegisterUser) y los subscribers se componen
+// sobre ESTA instancia. Se expone para que app/ (instrumentation) suscriba el handler de
+// provisión de `tenancy` a `UserRegistered` (FR-010), sin que `identity` conozca `tenancy`.
+export const eventBus: EventBus = new InMemoryEventBus();
 const users: UserRepository = new PrismaUserRepository(prisma);
 const tokens: VerificationTokenRepository = new PrismaVerificationTokenRepository(prisma);
 
@@ -58,7 +61,7 @@ export interface IdentityModule {
 }
 
 export const identity: IdentityModule = {
-  registerUser: new RegisterUser(users, hasher, events),
+  registerUser: new RegisterUser(users, hasher, eventBus),
   requestEmailVerification: new RequestEmailVerification(users, tokens, emailSender),
   verifyEmail: new VerifyEmail(users, tokens),
   getCurrentUser: new GetCurrentUser(users),
