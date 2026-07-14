@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { auth } from "@/modules/identity";
+import { auth } from "@/app/auth";
 import { LOGIN_ROUTE } from "@/config/routes";
 
 // Gate autoritativo del área privada (runtime Node): `auth()` verifica la sesión JWT. Sin

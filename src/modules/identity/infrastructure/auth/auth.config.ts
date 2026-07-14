@@ -1,4 +1,5 @@
-import type { NextAuthConfig } from "next-auth";
+import type { NextAuthConfig, Session } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { z } from "zod";
@@ -18,8 +19,19 @@ const credentialsSchema = z.object({
   password: z.string(),
 });
 
+// Costura de poblado de claims: identity expone DÓNDE se enganchan (jwt/session) pero no QUÉ se
+// puebla. El extensor concreto (tenant/rol) es de `tenancy` y se inyecta desde el composition
+// root de app/ (FR-009). Se tipa estructuralmente: identity no importa `tenancy`.
+export interface SessionClaimsExtension {
+  readonly populateToken: (token: JWT) => Promise<JWT>;
+  readonly applyToSession: (session: Session, token: JWT) => Session;
+}
+
 export interface AuthConfigDeps {
   readonly authenticate: AuthenticateCredentials;
+  // Opcional: identity funciona AuthN-only sin él (tests de config puros); en la app real lo
+  // provee `tenancy` a través de app/.
+  readonly claims?: SessionClaimsExtension;
 }
 
 // Identidad mínima que `authorize` entrega a Auth.js (sin `passwordHash`, NFR-004).
@@ -59,7 +71,7 @@ export async function authorizeCredentials(
 // Config estática de Auth.js: providers + sesión JWT + páginas + callbacks. NO incluye el
 // adapter ni llama a `NextAuth()`, así que es un objeto puro inspeccionable en un test sin
 // env ni Prisma (SC-015). La instancia real (adapter + NextAuth) se compone en `create-auth.ts`.
-export function buildAuthConfig({ authenticate }: AuthConfigDeps): NextAuthConfig {
+export function buildAuthConfig({ authenticate, claims }: AuthConfigDeps): NextAuthConfig {
   return {
     session: { strategy: "jwt", maxAge: SESSION_MAX_AGE },
     pages: { signIn: "/login" },
@@ -74,23 +86,30 @@ export function buildAuthConfig({ authenticate }: AuthConfigDeps): NextAuthConfi
     ],
     callbacks: {
       // En el sign-in `user` está presente: propagamos `emailVerified` al token como epoch
-      // (el JWT serializa a JSON). `token.sub` ya transporta el id del usuario.
-      jwt({ token, user }) {
+      // (el JWT serializa a JSON). `token.sub` ya transporta el id del usuario. Solo en el
+      // sign-in se compone el extensor de tenancy (poblado del claim de tenant/rol, R1/R6).
+      async jwt({ token, user }) {
         if (user) {
           const emailVerified = user.emailVerified ?? null;
           token.emailVerified =
             emailVerified instanceof Date ? emailVerified.getTime() : emailVerified;
+          if (claims) {
+            return claims.populateToken(token);
+          }
         }
         return token;
       },
-      // Exponemos id/emailVerified en la sesión. `activeTenantId?`/`role?` quedan RESERVADOS:
-      // los poblará `tenancy` en una fase posterior (costura tipada, sin poblar aquí, FR-009).
+      // Exponemos id/emailVerified en la sesión; el extensor de tenancy refleja
+      // activeTenantId/role del token en la sesión (compuesto en app/, FR-009).
       session({ session, token }) {
         if (token.sub) {
           session.user.id = token.sub;
         }
         session.user.emailVerified =
           typeof token.emailVerified === "number" ? new Date(token.emailVerified) : null;
+        if (claims) {
+          return claims.applyToSession(session, token);
+        }
         return session;
       },
     },

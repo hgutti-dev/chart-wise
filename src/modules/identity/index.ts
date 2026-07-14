@@ -1,17 +1,20 @@
 // API pública del módulo `identity`: única superficie importable desde fuera (el linter
 // prohíbe deep-imports). AuthN only (ADR-007): expone identidad y sesión, nunca autorización.
 
-// Auth.js server-callable (route handler, layout gate, Server Actions) + casos de uso wired.
+// Factory de Auth.js: la instancia (handlers/auth/signIn/signOut) se compone en el composition
+// root de app/, que inyecta el extensor de claims de `tenancy`. + casos de uso ya cableados.
+export { createIdentityAuth, identity, type IdentityModule } from "./di";
+
+// Costura de poblado de claims (dónde se enganchan jwt/session): app/ inyecta aquí el extensor
+// de `tenancy`. identity define la costura, no el contenido (FR-009).
+export type { SessionClaimsExtension } from "./infrastructure/auth/auth.config";
+
+// Glue de login por credenciales (traduce el AuthError de Auth.js, sin filtrar `next-auth`) + su
+// input. app/ compone el wrapper con el `signIn` de la instancia creada.
 export {
-  auth,
-  handlers,
-  identity,
-  type IdentityModule,
-  signIn,
-  signInWithCredentials,
-  signOut,
-} from "./di";
-export type { CredentialsSignInInput } from "./infrastructure/auth/credentials-sign-in";
+  credentialsSignIn,
+  type CredentialsSignInInput,
+} from "./infrastructure/auth/credentials-sign-in";
 
 // Tipo de sesión augmentado, sin filtrar `next-auth` fuera de infrastructure/auth/ (NFR-002).
 export type { AppSession } from "./infrastructure/auth/session";

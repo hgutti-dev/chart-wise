@@ -42,10 +42,10 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 - [x] **T053 [P]** `tests/integration/tenancy/prisma-membership.repository.spec.ts`: **Verificar SC-008** como `app_user`.
 
 ## Fase F — Poblado del claim (compuesto en `app/`) *(FR-009)*
-- [ ] **T060** `tenancy/infrastructure/auth/populate-tenant-claims.ts`: extensor que recibe `MembershipRepository` y puebla `activeTenantId`/`role` desde la membresía activa.
-- [ ] **T061** Actualizar la augmentación de tipos (`role` → unión literal de `Role`, `activeTenantId`), sin que `identity` importe `tenancy` (ver research R1).
-- [ ] **T062** Componer el extensor con los callbacks base de `identity` en el composition root de `app/` (donde se instancia Auth.js), inyectando el repo desde `tenancy/di.ts`.
-- [ ] **T063 [P]** **Verificar SC-010** (`typecheck` accede a `session.role`/`activeTenantId` poblados) y preparar la trampa para **SC-013**.
+- [x] **T060** `tenancy/infrastructure/auth/populate-tenant-claims.ts`: `createTenantClaims(repo)` → extensor (`populateToken`/`applyToSession`) que puebla `activeTenantId`/`role` desde la membresía activa. Unit-tested con el fake.
+- [x] **T061** Augmentación estrechada en `identity/infrastructure/auth/next-auth.d.ts` (`role` → unión literal `SessionRole`, `activeTenantId`), sin importar el `Role` de `tenancy` (R1).
+- [x] **T062** Auth.js se instancia en `src/app/auth.ts` (composition root): compone `createIdentityAuth(tenantClaims)`; los 6 consumidores de `app/` pasan a importar `auth/handlers/signIn/signOut/signInWithCredentials` de ahí. `identity` expone la costura (`SessionClaimsExtension`), no el contenido.
+- [x] **T063 [P]** **SC-010** verificado (typecheck + `tests/unit/tenancy/session-claims-contract.spec.ts`) + wiring test en `auth-config.spec.ts`; `identity ↛ @/modules/tenancy` confirmado (trampa SC-013 lista para Fase H). Build de producción limpio.
 
 ## Fase G — Provisión de workspace *(FR-010)*
 - [ ] **T070** `tenancy/application/provision-workspace-on-user-registered.ts`: consume `UserRegistered`; crea `Tenant`+`Membership(OWNER)` en transacción atómica; idempotente por `userId`.

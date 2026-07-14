@@ -1,5 +1,6 @@
 import type { Session } from "next-auth";
-import { describe, expect, it } from "vitest";
+import type { JWT } from "next-auth/jwt";
+import { describe, expect, it, vi } from "vitest";
 
 import type {
   AuthenticateCredentials,
@@ -108,5 +109,63 @@ const readsSessionContract = (
 describe("contrato de sesión augmentado (SC-011)", () => {
   it("expone id/emailVerified y reserva activeTenantId?/role? (verificado en typecheck)", () => {
     expect(readsSessionContract).toBeTypeOf("function");
+  });
+});
+
+// FR-009: identity define la COSTURA (dónde se enganchan jwt/session); el contenido (poblado de
+// tenant/rol) lo inyecta el extensor de `tenancy` desde app/. Aquí se prueba que la composición
+// delega en el extensor, con un stub — identity no conoce el `Role` ni la DB.
+describe("buildAuthConfig — composición del extensor de claims (FR-009)", () => {
+  const claimsPatch = { activeTenantId: "t-1", role: "ADMIN" } as const;
+
+  it("en el sign-in (user presente), jwt delega en populateToken", async () => {
+    const populateToken = vi.fn(
+      async (token: JWT): Promise<JWT> => ({ ...token, ...claimsPatch }),
+    );
+    const applyToSession = vi.fn((session: Session): Session => session);
+    const cfg = buildAuthConfig({
+      authenticate: stubAuthenticate(ok(AUTHED)),
+      claims: { populateToken, applyToSession },
+    });
+
+    const jwt = cfg.callbacks?.jwt;
+    const token = await jwt?.({
+      token: { sub: "u1" },
+      user: { id: "u1", email: "a@b.com" },
+    } as unknown as Parameters<NonNullable<typeof jwt>>[0]);
+
+    expect(populateToken).toHaveBeenCalledOnce();
+    expect(token).toMatchObject({ activeTenantId: "t-1", role: "ADMIN" });
+  });
+
+  it("session delega en applyToSession para exponer los claims", async () => {
+    const populateToken = vi.fn(async (token: JWT): Promise<JWT> => token);
+    const applyToSession = vi.fn(
+      (session: Session, token: JWT): Session => ({ ...session, role: token.role }),
+    );
+    const cfg = buildAuthConfig({
+      authenticate: stubAuthenticate(ok(AUTHED)),
+      claims: { populateToken, applyToSession },
+    });
+
+    const sessionCb = cfg.callbacks?.session;
+    await sessionCb?.({
+      session: { user: { id: "u1", emailVerified: null }, expires: "2099-01-01" },
+      token: { sub: "u1", role: "ADMIN" },
+    } as unknown as Parameters<NonNullable<typeof sessionCb>>[0]);
+
+    expect(applyToSession).toHaveBeenCalledOnce();
+  });
+
+  it("sin extensor, jwt no falla (identity AuthN-only)", async () => {
+    const cfg = buildAuthConfig({ authenticate: stubAuthenticate(ok(AUTHED)) });
+
+    const jwt = cfg.callbacks?.jwt;
+    const token = await jwt?.({
+      token: { sub: "u1" },
+      user: { id: "u1", email: "a@b.com" },
+    } as unknown as Parameters<NonNullable<typeof jwt>>[0]);
+
+    expect(token).toMatchObject({ sub: "u1" });
   });
 });
