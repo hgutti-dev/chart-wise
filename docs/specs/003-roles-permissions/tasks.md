@@ -54,9 +54,9 @@ Convenciones: `[ ]` pendiente · `[x]` hecho. `[P]` = paralelizable (sin depende
 - [x] **T073 [P]** `tests/unit/tenancy/provision-workspace.spec.ts`: **SC-011** verificado (crea ambos; provisión falla → nada persistido; idempotente).
 
 ## Fase H — Arquitectura + cierre *(FR-011, FR-012)*
-- [ ] **T080** `tests/architecture/*`: aserciones nuevas — `tenancy/domain` no importa infra (**SC-001**); matriz no importable desde `src/config/**` y no-deep-import de `authorization/` (**SC-012**); `identity ↛ @/modules/tenancy` (**SC-013**). Añadir overrides de ESLint si hacen falta (matriz fuera de `config/`).
-- [ ] **T081** Registrar **ADR-008** en `../../spec.md §8` (autorización en `tenancy` materializada, poblado de claims compuesto en `app/`, policy RLS de `Membership`).
-- [ ] **T082** Marcar `checklists/requirements.md` con evidencia (comando + salida); flip de `Estado` en `spec.md` a "Implementado".
+- [x] **T080** `tests/architecture/dependency-rule.spec.ts`: aserciones nuevas — `identity ↛ @/modules/tenancy` (**SC-013**, cubre el barrel que el deep-import no atrapa) y `config/` no importa `domain/authorization/` (**SC-012**). SC-001 (dominio puro) y el no-deep-import ya estaban cubiertos (globs). Sin overrides de ESLint: boundaries (config→solo config; domain/infra→sin `module`) + `DEEP_MODULE_IMPORT` cubren el resto sin arriesgar el last-match-wins.
+- [x] **T081** **ADR-008** registrado en `../../spec.md §8` (autorización en `tenancy`, poblado de claims compuesto en `app/`, dos policies RLS de `Membership` con `NULLIF`, provisión atómica vía `WorkspaceProvisioner`).
+- [x] **T082** `checklists/requirements.md` marcado; `Estado` de `spec.md` → "Implementado".
 
 ### Trazabilidad requisito → tareas
 

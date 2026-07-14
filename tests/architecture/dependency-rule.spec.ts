@@ -63,6 +63,17 @@ const DEEP_MODULE_IMPORT = /^@\/modules\/[^/]+\/.+/;
 const AUTH_JS_LIBS = [/^next-auth$/, /^next-auth\/.+/, /^@auth\/.+/];
 const AUTH_INFRA_DIR = /modules\/[^/]+\/infrastructure\/auth\//;
 
+// SC-013: `identity` NO conoce `tenancy` (dirección de dependencias §5 / ADR-003, NFR-004). El
+// poblado del claim y la provisión de workspace se componen en app/, nunca dentro de identity.
+// Cubre el import por barrel (`@/modules/tenancy`), que el guard de deep-import no atrapa.
+const IDENTITY_DIR = /(^|\/)modules\/identity\//;
+const TENANCY_MODULE = /^@\/modules\/tenancy(\/|$)/;
+
+// SC-012: la política de autorización ES dominio y vive en `tenancy` (constitución §7.1). `config/`
+// no puede importar la matriz de permisos (ni nada de `domain/authorization/`).
+const CONFIG_DIR = /^src\/config\//;
+const AUTHORIZATION_MODULE = /^@\/modules\/[^/]+\/domain\/authorization(\/|$)/;
+
 const sourceFiles = walk(SRC).map((path) => ({
   path,
   rel: relative(ROOT, path).replace(/\\/g, "/"),
@@ -102,6 +113,30 @@ describe("regla de dependencia (respaldo del linter)", () => {
       .flatMap((file) =>
         file.imports
           .filter((spec) => AUTH_JS_LIBS.some((re) => re.test(spec)))
+          .map((spec) => `${file.rel} -> ${spec}`),
+      );
+
+    expect(violations).toEqual([]);
+  });
+
+  it("identity no importa tenancy (SC-013): la composición vive en app/", () => {
+    const violations = sourceFiles
+      .filter((file) => IDENTITY_DIR.test(file.rel))
+      .flatMap((file) =>
+        file.imports
+          .filter((spec) => TENANCY_MODULE.test(spec))
+          .map((spec) => `${file.rel} -> ${spec}`),
+      );
+
+    expect(violations).toEqual([]);
+  });
+
+  it("config/ no importa la matriz de permisos (SC-012): la autorización es dominio", () => {
+    const violations = sourceFiles
+      .filter((file) => CONFIG_DIR.test(file.rel))
+      .flatMap((file) =>
+        file.imports
+          .filter((spec) => AUTHORIZATION_MODULE.test(spec))
           .map((spec) => `${file.rel} -> ${spec}`),
       );
 

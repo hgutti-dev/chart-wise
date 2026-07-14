@@ -1,7 +1,7 @@
 # Fase 3 — Roles y permisos: autorización por membresía en `tenancy`
 
 - **Feature:** `003-roles-permissions`
-- **Estado:** Draft para revisión
+- **Estado:** Implementado
 - **Fecha:** 2026-07-13
 - **Constitución:** [../../spec.md](../../spec.md) — este spec **hereda** sus principios y no los repite.
 - **Modelo conceptual:** [../../data-model.md](../../data-model.md) (entidades de `tenancy`).
